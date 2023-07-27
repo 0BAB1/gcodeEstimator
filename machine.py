@@ -12,7 +12,7 @@ class Lathe():
         self.cycle = "" # stores currrent G cycle
         self.cycleTime = 0 #current cycle accumulated time
     
-    def move_and_get_time(self, new_pos, fast = False):
+    def move_and_get_time_linear(self, new_pos, fast = False):
         """moves the tool to its new position"""
         X = new_pos[0]
         Z = new_pos[1]
@@ -47,7 +47,7 @@ class Lathe():
         #\/ \/ \/ \/ to treat variables : should add a dict "self.varibles" stocking vars id "[]" is detected in a non G line and then self.readVar() is called if a "[]" is detected in a G line\/ \/ \/ \/ 
             
         #===================
-        #TOOL NAME GETTER ==
+        #  TOOL NAME GETTER 
         #===================
         
         T = getParam(line, "T")
@@ -66,11 +66,15 @@ class Lathe():
             
             
         #and now, we cover all G codes possibilities...
-        if self.cycle in ["G00", "G0"]: #we check for parenthethis as they show a comment line which should not be treated also for [ as it is varible and i don't want to do that rn!
+        
+        #G0 : fast linear interpolation
+        if self.cycle in ["G00", "G0"]:
             self.inCycle = True
             
             #get X and Z, we do all the data treatment in the moving methods
             X = getParam(line, "X")
             Z = getParam(line, "Z")
             
-            print(self.move_and_get_time((X,Z), fast = True))
+            print(self.toolName + " => " + self.move_and_get_time_linear((X,Z), fast = True) + "seconds")
+        
+        
