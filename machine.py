@@ -9,6 +9,7 @@ class Lathe():
         self.feed = 0 #mm/tour
         self.maxSpeed = 12500 #mm/min
         self.rotation = 0 #1/min
+        self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
         self.toolName = ""
         
         self.cycle = "" # stores currrent G cycle
@@ -44,7 +45,7 @@ class Lathe():
         """returns all the current cycle data for logging and reset the cycle time"""
         if (self.cycleTime == 0 and self.deadCycleTime == 0) or len(self.toolName) <= 1:
             return
-        print(self.toolName + " => " + str(self.cycleTime + self.deadCycleTime) + " seconds")
+        #print(self.toolName + " => " + str(self.cycleTime + self.deadCycleTime) + " seconds")
         self.cycleTime = 0
         self.deadCycleTime = 0
         return
@@ -91,6 +92,29 @@ class Lathe():
             
         #and now, we cover all G codes possibilities...
         
+        #-----------------------------
+        #Cutting speeds G getters
+        #-----------------------------
+        
+        if self.cycle in ["G97"]:
+            #Definition de vitesse de rotation constante
+            S = getParam(line, "S")
+            if S:
+                self.isRotationConstant = True
+                self.rotation = float(S[1:])
+                
+        #G92 here
+                
+        if self.cycle in ["G96"]:
+            S = getParam(line, "S")
+            if S:
+                self.isRotationConstant = False
+                self.cuttingSpeed = float(S[1:])
+        
+        #-----------------------------
+        #Machinning cycles G getters
+        #-----------------------------
+        
         #G0 : fast linear interpolation
         if self.cycle in ["G00", "G0"]:
             self.inCycle = True
@@ -100,8 +124,5 @@ class Lathe():
             Z = getParam(line, "Z")
             
             self.deadCycleTime += self.move_and_get_time_linear((X,Z), fast = True) #add the cycle time to the current time cycle
-        
-        #G01 or G1 : linear interpolation at cutting speed
-        
         
         
