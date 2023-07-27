@@ -20,13 +20,11 @@ class Lathe():
         if not X :
             X = self.position[0]
         else :
-            print(X)
             X = float(X[1:].replace(",",""))
             
         if not Z :
             Z = self.position[0]
         else :
-            print(Z)
             Z = float(Z[1:].replace(",",""))
             
         dist = sqrt((X-self.position[0])**2 + (Z-self.position[1])**2)
@@ -37,21 +35,42 @@ class Lathe():
             time = dist / self.speed
             
         self.position = (X,Z)
-        return time
+        return time*60 #return seconds
     
-    def treatLine(self, line):
+    def interpret(self, line):
         """get a line, interprets it and returns toolname, op type and time for csv indentation if the machine did not finished current cycle, returns nothing"""
+        
+        # \/ \/ \/ \/  here, should add a return if the line is a comment so it doesn't get interpreted \/ \/ \/ \/
+        if "(" in line or "[" in line :
+            return print("comment or variable")
+        
+        #\/ \/ \/ \/ to treat variables : should add a dict "self.varibles" stocking vars id "[]" is detected in a non G line and then self.readVar() is called if a "[]" is detected in a G line\/ \/ \/ \/ 
+            
+        #===================
+        #TOOL NAME GETTER ==
+        #===================
+        
+        T = getParam(line, "T")
+        
+        if T != None:
+            self.toolName = T
+        
+        #===================
+        #G CODES INTERPRETER
+        #===================
+        
+        #DEFINIE G CYCLE
         G = getParam(line, "G") #get the G
         if G != None: #if the G exists, then we have a new cycle
             self.cycle = G
+            
+            
         #and now, we cover all G codes possibilities...
-        
-        if self.cycle in ["G00", "G0"] and not "(" in line and not "[" in line: #we check for parenthethis as they show a comment line which should not be treated also for [ as it is varible and i don't want to do that rn!
+        if self.cycle in ["G00", "G0"]: #we check for parenthethis as they show a comment line which should not be treated also for [ as it is varible and i don't want to do that rn!
             self.inCycle = True
             
             #get X and Z, we do all the data treatment in the moving methods
             X = getParam(line, "X")
             Z = getParam(line, "Z")
             
-            print(line)
-            print(60*self.move_and_get_time((X,Z), fast = True))
+            print(self.move_and_get_time((X,Z), fast = True))
