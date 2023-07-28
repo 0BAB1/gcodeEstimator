@@ -1,6 +1,6 @@
-from machine import Lathe
+from machines import Biglia
 
-lathe = Lathe()
+lathe = Biglia()
 
 filename = "G.txt"
 

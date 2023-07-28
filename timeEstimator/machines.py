@@ -1,26 +1,41 @@
 from math import sqrt
-from utils import getParam
+from .utils import getParam
 
-class Lathe():
+class Biglia():
     """go inside machine.py to configure the lathe to correspond to your lathe's specifications"""
     def __init__(self) -> None:
         self.position = (0,0) # mm x,z
         self.cuttingSpeed = 0 #m/min
         self.feed = 0 #mm/tour
+        self.perRevolutionFeed = True #mm/min si false
         self.maxSpeed = 12500 #mm/min
         self.rotation = 0 #1/min
         self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
         self.toolName = ""
         
-        self.cycle = "" # stores currrent G cycle
+        self.currentCycle = ""
         self.cycleTime = 0 #current cycle accumulated time
         self.deadCycleTime = 0 #not machining (fast interpolations)
+        
+        self.csvData = {} #to return at the end later on
+        self.globalTime = 0.0  #to return for testing purpuses
     
-    def move_and_get_time_linear(self, new_pos, fast = False):
+    def move_and_get_time_linear(self, new_pos, fast = False) -> float:
         """moves the tool to its new position in a linear trajectory. returns the necessary time"""
         X = new_pos[0]
         Z = new_pos[1]
-    
+
+        #determine the speed depending on the machinning factors
+        
+        #=======================
+        #  SPEED DETERMINATOR
+        #=======================
+        
+        if self.isRotationConstant:
+            speed = self.rotation * self.feed
+        else :
+            speed = 0
+
         if not X :
             X = self.position[0]
         else :
@@ -36,12 +51,13 @@ class Lathe():
         if fast:
             time = dist / self.maxSpeed
         elif not fast:
-            time = dist / self.speed
+            time = dist / speed
             
         self.position = (X,Z)
+        self.globalTime += time*60
         return time*60 #return seconds
     
-    def sendDataAndReset(self):
+    def sendDataAndReset(self) -> None:
         """returns all the current cycle data for logging and reset the cycle time"""
         if (self.cycleTime == 0 and self.deadCycleTime == 0) or len(self.toolName) <= 1:
             return
@@ -49,11 +65,15 @@ class Lathe():
         self.cycleTime = 0
         self.deadCycleTime = 0
         return
+    
+    def getGlobalTime(self) -> float:
+        """return the global time, mostly for testing purpuses"""
+        return self.globalTime
 
     
     def interpret(self, line):
         """get a line, interprets it and returns toolname, op type and time for csv indentation if the machine did not finished current cycle, returns nothing"""
-        
+        print(self.currentCycle)
         # \/ \/ \/ \/  here, should add a return if the line is a comment so it doesn't get interpreted \/ \/ \/ \/
         if "(" in line or "[" in line :
             return
@@ -78,17 +98,16 @@ class Lathe():
         F = getParam(line, "F")
         
         if F != None and F != "":
-            self.feed = F
+            self.feed = float(F[1:])
         
         #=====================
         # G CODES INTERPRETER
         #=====================
         
-        #DEFINIE G CYCLE
-        G = getParam(line, "G") #get the G
-        if G != None and G != self.cycle: #if the G changes, then we return the cycle data to the asker
-            self.cycle = G
-            
+        #we get the current cycle so we can spread it across lines
+        G = getParam(line, "G")
+        if G != None and G != self.currentCycle and "G" in G:
+            self.currentCycle = G
             
         #and now, we cover all G codes possibilities...
         
@@ -96,16 +115,24 @@ class Lathe():
         #Cutting speeds G getters
         #-----------------------------
         
-        if self.cycle in ["G97"]:
+        #look for G95 or G94 to determine thje state of self.perRevoltionFeed (true id mm/tr and false if mm/min)
+        if "G95" in line or "G99" in line:
+            self.perRevolutionFeed = True
+        if "G94" in line or "G98" in line:
+            self.perRevolutionFeed = False
+        
+        #G97 says we use constant rotation speed, thus using cuuting speed useless
+        if "G97" in line:
             #Definition de vitesse de rotation constante
             S = getParam(line, "S")
             if S:
                 self.isRotationConstant = True
                 self.rotation = float(S[1:])
                 
-        #G92 here
+        #G92 here, maximum
                 
-        if self.cycle in ["G96"]:
+        #G96 tells us we use cutting speed to move the  tool
+        if "G96" in line:
             S = getParam(line, "S")
             if S:
                 self.isRotationConstant = False
@@ -116,13 +143,21 @@ class Lathe():
         #-----------------------------
         
         #G0 : fast linear interpolation
-        if self.cycle in ["G00", "G0"]:
-            self.inCycle = True
+        if self.currentCycle in ["G00", "G0"]:
             
             #get X and Z, we do all the data treatment in the moving methods
             X = getParam(line, "X")
             Z = getParam(line, "Z")
             
             self.deadCycleTime += self.move_and_get_time_linear((X,Z), fast = True) #add the cycle time to the current time cycle
-        
-        
+            
+        #G01 : linear mouvement
+        if self.currentCycle in ["G01", "G1"]:
+            
+            #get X and Z, we do all the data treatment in the moving methods
+            X = getParam(line, "X")
+            Z = getParam(line, "Z")
+            
+            self.deadCycleTime += self.move_and_get_time_linear((X,Z), fast = False) #add the cycle time to the current time cycle
+            
+            
