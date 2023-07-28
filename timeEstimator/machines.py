@@ -73,9 +73,8 @@ class Biglia():
     
     def interpret(self, line):
         """get a line, interprets it and returns toolname, op type and time for csv indentation if the machine did not finished current cycle, returns nothing"""
-        print(self.currentCycle)
         # \/ \/ \/ \/  here, should add a return if the line is a comment so it doesn't get interpreted \/ \/ \/ \/
-        if "(" in line or "[" in line :
+        if "(" in line or "[" in line:
             return
         
         #\/ \/ \/ \/ to treat variables : should add a dict "self.varibles" stocking vars id "[]" is detected in a non G line and then self.readVar() is called if a "[]" is detected in a G line\/ \/ \/ \/ 
@@ -129,7 +128,7 @@ class Biglia():
                 self.isRotationConstant = True
                 self.rotation = float(S[1:])
                 
-        #G92 here, maximum
+        #G92 here, maximum rotation speed rate
                 
         #G96 tells us we use cutting speed to move the  tool
         if "G96" in line:
@@ -158,6 +157,6 @@ class Biglia():
             X = getParam(line, "X")
             Z = getParam(line, "Z")
             
-            self.deadCycleTime += self.move_and_get_time_linear((X,Z), fast = False) #add the cycle time to the current time cycle
+            self.cycleTime += self.move_and_get_time_linear((X,Z), fast = False) #add the cycle time to the current time cycle
             
             
