@@ -7,4 +7,4 @@ G0X0Z0
 G1Z20F0.05
 X20
 
-(temps d'exec théroqie : 24 secondes)
+(exec théorque 24secs)
