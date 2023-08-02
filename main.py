@@ -2,7 +2,7 @@ from timeEstimator.machines import Biglia
 
 lathe = Biglia()
 
-filename = "G.txt"
+filename = "G.g"
 
 with open(filename, "r") as file:
     for line in file:
