@@ -15,6 +15,8 @@ class Biglia():
         self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
         self.toolName = ""
         
+        self.variables = {}
+        
         self.currentCycle = ""
         self.cycleTime = 0 #current cycle accumulated time
         self.deadCycleTime = 0 #not machining (fast interpolations)
@@ -41,16 +43,15 @@ class Biglia():
             Z = float(Z[1:].replace(",",""))
             
         #=== speed setter ===
-        
-        if self.isRotationConstant:
+        if not self.perRevolutionFeed :
+            speed = self.feed
+        elif self.isRotationConstant:
             speed = self.rotation * self.feed
-        elif not fast and self.perRevolutionFeed:
+        elif not fast and not self.isRotationConstant:
             D_moyen = X + self.position[0]
             rot_moyen = 1000 * self.cuttingSpeed / (pi * D_moyen)
             if rot_moyen > self.maxRotation : rot_moyen = self.maxRotation
             speed = rot_moyen * self.feed
-        elif not fast and not self.perRevolutionFeed:
-            speed = self.feed
                 
         #=== distance setter ===
             
@@ -74,14 +75,13 @@ class Biglia():
         self.deadCycleTime = 0
         return
     
-    def getGlobalTime(self) -> float:
-        """return the global time, mostly for testing purpuses"""
-        return self.globalTime
-
-    
     def interpret(self, line):
         """get a line, interprets it and stores toolname, op type and time for csv indentation in its (the lathe) inernal dataset"""
+        
         line = re.sub("\(.*?\)","",line)
+        var = getVar(line)
+        if var:
+            self.variables[var[0]] = var[1]
         
         #\/ \/ \/ \/ to treat variables : should add a dict "self.varibles" stocking vars id "[]" is detected in a non G line and then self.readVar() is called if a "[]" is detected in a G line\/ \/ \/ \/ 
             
@@ -141,22 +141,20 @@ class Biglia():
                 self.maxRotation = float(S[1:])
                 
         #G96 tells us we use cutting speed to move the  tool
-        print(line)
         if "G96" in line:
             S = getParam(line, "S")
             if S:
                 self.isRotationConstant = False
                 self.cuttingSpeed = float(S[1:])
-                print("CUTTTINNNNG SPEEEEEEEEED")
         
         #-----------------------------
         #Machinning cycles G getters
         #-----------------------------
         
-        X = getParam(line, "X")
-        Z = getParam(line, "Z")
-        U = getParam(line, "U")
-        W = getParam(line, "W")
+        X = getParam(line, "X", self.variables)
+        Z = getParam(line, "Z", self.variables)
+        U = getParam(line, "U", self.variables)
+        W = getParam(line, "W", self.variables)
         
         #a little dirty but who cares really ? it was a quick fix. maybe do it a little better and rework the "param getting" when i have the time
         if not X and U:
@@ -171,6 +169,6 @@ class Biglia():
         #G01 : linear mouvement
         if self.currentCycle in ["G01", "G1"]:
             self.cycleTime += self.move_and_get_time_linear((X,Z), fast = False) #add the cycle time to the current time cycle
-            
-        #G02 : circular mouvement
-        ...
+
+        
+        #G2 and G3 to add in the end
