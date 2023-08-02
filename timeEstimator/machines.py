@@ -153,22 +153,24 @@ class Biglia():
         #Machinning cycles G getters
         #-----------------------------
         
+        X = getParam(line, "X")
+        Z = getParam(line, "Z")
+        U = getParam(line, "U")
+        W = getParam(line, "W")
+        
+        #a little dirty but who cares really ? it was a quick fix. maybe do it a little better and rework the "param getting" when i have the time
+        if not X and U:
+            X = "X" + str(self.position[0] + float(U[1:]))
+        if not Z and W:
+            Z = "Z" + str(self.position[1] + float(W[1:]))
+        
         #G0 : fast linear interpolation
         if self.currentCycle in ["G00", "G0"]:
-            
-            #get X and Z, we do all the data treatment in the moving methods
-            X = getParam(line, "X")
-            Z = getParam(line, "Z")
-            
             self.deadCycleTime += self.move_and_get_time_linear((X,Z), fast = True) #add the cycle time to the current time cycle
+            
         #G01 : linear mouvement
         if self.currentCycle in ["G01", "G1"]:
-            
-            #get X and Z, we do all the data treatment in the moving methods
-            X = getParam(line, "X")
-            Z = getParam(line, "Z")
-            
-            
-            print("this line is G1" , line)
             self.cycleTime += self.move_and_get_time_linear((X,Z), fast = False) #add the cycle time to the current time cycle
-            print("test")
+            
+        #G02 : circular mouvement
+        ...

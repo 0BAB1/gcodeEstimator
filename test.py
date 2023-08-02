@@ -1,3 +1,5 @@
+"""I suggest you use pytest to execute this code"""
+
 from timeEstimator.machines import *
 from timeEstimator.utils import *
 
@@ -52,6 +54,17 @@ def test_get_time_with_G94_or_G98_constantFeed():
             lathe.interpret(line)
     assert lathe.getGlobalTime() >= 21-0.1
     assert lathe.getGlobalTime() <= 21+0.1
+
+def test_get__time_incremental_position():
+    """uses the tests/TESTG0.g code for a dist of 600 but using U, W, incremental values for positionning"""
+    lathe = Biglia()
+    file = "tests/TEST_INCREMENTAL.g"
+    normaltime = 60*600 / lathe.maxSpeed
+    with open(file, "r") as file:
+        for line in file:
+            lathe.interpret(line)
+            
+    assert lathe.getGlobalTime() >= normaltime - 0.05 and lathe.getGlobalTime() <= normaltime + 0.05
     
 def test_get_time_with_G2():
     """constant constant face speed is used (ie VC is on)"""
