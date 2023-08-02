@@ -15,6 +15,9 @@ class Biglia():
         self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
         self.toolName = ""
         
+        self.isProfileDefinitionTakingPlace = False # if we are in a cycle that requires a definition of a profile
+        self.profileLenght = 0 #we also store the profile lenght
+        
         self.variables = {}
         
         self.currentCycle = ""
@@ -43,6 +46,7 @@ class Biglia():
             Z = float(Z[1:].replace(",",""))
             
         #=== speed setter ===
+        
         if not self.perRevolutionFeed :
             speed = self.feed
         elif self.isRotationConstant:
@@ -148,7 +152,7 @@ class Biglia():
                 self.cuttingSpeed = float(S[1:])
         
         #-----------------------------
-        #Machinning cycles G getters
+        # Machinning cycles G getters
         #-----------------------------
         
         X = getParam(line, "X", self.variables)
@@ -161,7 +165,7 @@ class Biglia():
             X = "X" + str(self.position[0] + float(U[1:]))
         if not Z and W:
             Z = "Z" + str(self.position[1] + float(W[1:]))
-        
+            
         #G0 : fast linear interpolation
         if self.currentCycle in ["G00", "G0"]:
             self.deadCycleTime += self.move_and_get_time_linear((X,Z), fast = True) #add the cycle time to the current time cycle
@@ -169,6 +173,3 @@ class Biglia():
         #G01 : linear mouvement
         if self.currentCycle in ["G01", "G1"]:
             self.cycleTime += self.move_and_get_time_linear((X,Z), fast = False) #add the cycle time to the current time cycle
-
-        
-        #G2 and G3 to add in the end

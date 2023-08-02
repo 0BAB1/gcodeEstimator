@@ -77,6 +77,9 @@ def test_program_variable():
     
     assert lathe.globalTime >= normaltime - 0.05 and lathe.globalTime <= normaltime + 0.05
     
+def test_get_time_with_G71():
+    """G71 : ébauche axiale """
+    
 def test_get_time_with_G2():
     """constant constant face speed is used (ie VC is on)"""
     #Add G2 and G3 support in the end, for now it is just a simple *1.5 on the base G1 value
