@@ -1,0 +1,17 @@
+add a get paramsDict functionfor line with multiple G code and extract lathes cycle  and cutting speeds from it etc... 
+
+redispatcher le code en fonctions dans utils pour clear un peu le code de machines.py
+
+utiliser un michier machine.conf pour configurer la machine
+
+coder un interpreteur fraiseuse en +
+
+add g2 et g3 interpreteur
+
+G71 :
+    - see if profile definition is taking PLACE
+    - determine distance
+        - create a "dtermine distance" function and sous-traiter tou ça par cette dite fonctions
+        - create a G2 and G3 distance approx, first xith R and then with I, J,K cas de figure
+    - execute the G71 by mooving with dist N times
+        - create a move_with_distance and use it (also voir pour sous-traiter)
