@@ -1,4 +1,4 @@
-from machines import Biglia
+from timeEstimator.machines import Biglia
 
 lathe = Biglia()
 

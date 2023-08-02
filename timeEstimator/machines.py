@@ -1,5 +1,6 @@
-from math import sqrt
-from .utils import getParam
+from math import sqrt, pi
+from .utils import *
+import re
 
 class Biglia():
     """go inside machine.py to configure the lathe to correspond to your lathe's specifications"""
@@ -7,9 +8,10 @@ class Biglia():
         self.position = (0,0) # mm x,z
         self.cuttingSpeed = 0 #m/min
         self.feed = 0 #mm/tour
-        self.perRevolutionFeed = True #mm/min si false
+        self.perRevolutionFeed = True #IS SPEED ? mm/min si false
         self.maxSpeed = 12500 #mm/min
         self.rotation = 0 #1/min
+        self.maxRotation = 5000#G92
         self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
         self.toolName = ""
         
@@ -26,25 +28,31 @@ class Biglia():
         Z = new_pos[1]
 
         #determine the speed depending on the machinning factors
-        
-        #=======================
-        #  SPEED DETERMINATOR
-        #=======================
-        
-        if self.isRotationConstant:
-            speed = self.rotation * self.feed
-        else :
-            speed = 0
-
+            
+        #=====position setter =======
         if not X :
             X = self.position[0]
         else :
             X = float(X[1:].replace(",",""))
             
         if not Z :
-            Z = self.position[0]
+            Z = self.position[1]
         else :
             Z = float(Z[1:].replace(",",""))
+            
+        #=== speed setter ===
+        
+        if self.isRotationConstant:
+            speed = self.rotation * self.feed
+        elif not fast and self.perRevolutionFeed:
+            D_moyen = X + self.position[0]
+            rot_moyen = 1000 * self.cuttingSpeed / (pi * D_moyen)
+            if rot_moyen > self.maxRotation : rot_moyen = self.maxRotation
+            speed = rot_moyen * self.feed
+        elif not fast and not self.perRevolutionFeed:
+            speed = self.feed
+                
+        #=== distance setter ===
             
         dist = sqrt((X-self.position[0])**2 + (Z-self.position[1])**2)
         
@@ -72,10 +80,8 @@ class Biglia():
 
     
     def interpret(self, line):
-        """get a line, interprets it and returns toolname, op type and time for csv indentation if the machine did not finished current cycle, returns nothing"""
-        # \/ \/ \/ \/  here, should add a return if the line is a comment so it doesn't get interpreted \/ \/ \/ \/
-        if "(" in line or "[" in line:
-            return
+        """get a line, interprets it and stores toolname, op type and time for csv indentation in its (the lathe) inernal dataset"""
+        line = re.sub("\(.*?\)","",line)
         
         #\/ \/ \/ \/ to treat variables : should add a dict "self.varibles" stocking vars id "[]" is detected in a non G line and then self.readVar() is called if a "[]" is detected in a G line\/ \/ \/ \/ 
             
@@ -88,8 +94,8 @@ class Biglia():
         if T != None:
             self.toolName = T
             #if this is a new tool, we return the tool times and procced to treat the next
-            return self.sendDataAndReset()
-        
+            #HERE SHOUL ADD A NEW ENTRY TO THE DATA DICT
+            
         #=====================
         #  FEED SPEED GETTER
         #=====================
@@ -129,13 +135,19 @@ class Biglia():
                 self.rotation = float(S[1:])
                 
         #G92 here, maximum rotation speed rate
+        if "G92" in line:
+            S = getParam(line, "S")
+            if S:
+                self.maxRotation = float(S[1:])
                 
         #G96 tells us we use cutting speed to move the  tool
+        print(line)
         if "G96" in line:
             S = getParam(line, "S")
             if S:
                 self.isRotationConstant = False
                 self.cuttingSpeed = float(S[1:])
+                print("CUTTTINNNNG SPEEEEEEEEED")
         
         #-----------------------------
         #Machinning cycles G getters
@@ -149,7 +161,6 @@ class Biglia():
             Z = getParam(line, "Z")
             
             self.deadCycleTime += self.move_and_get_time_linear((X,Z), fast = True) #add the cycle time to the current time cycle
-            
         #G01 : linear mouvement
         if self.currentCycle in ["G01", "G1"]:
             
@@ -157,6 +168,7 @@ class Biglia():
             X = getParam(line, "X")
             Z = getParam(line, "Z")
             
+            
+            print("this line is G1" , line)
             self.cycleTime += self.move_and_get_time_linear((X,Z), fast = False) #add the cycle time to the current time cycle
-            
-            
+            print("test")
