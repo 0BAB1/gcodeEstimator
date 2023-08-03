@@ -11,7 +11,7 @@ class Biglia():
         self.perRevolutionFeed = True #IS SPEED ? mm/min si false
         self.maxSpeed = 12500 #mm/min
         self.rotation = 0 #1/min
-        self.maxRotation = 5000#G92
+        self.maxRotation = 99999999#G92
         self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
         self.toolName = ""
         
@@ -88,8 +88,9 @@ class Biglia():
             
                 #then the math begins :
                 #determine u and v vectors (to old and new pos)
-                u = (-J + self.position[0], -I + self.position[1])
-                v = (X - J, Z - I)
+                u = (-I + self.position[0], -J + self.position[1])
+                v = (X - I, Z - J)
+                
                 #check if valid (determine R and apply 2R > distance)
                 if 2 * min(magnitude(u), magnitude(v)) < self.determineDistanceFromCurrentPos(X,Z):
                     raise ValueError("incorrect I and J values in code resulting in an impossible profile, please check yout program or use R")
@@ -109,6 +110,7 @@ class Biglia():
                 theta = 2 * (asin((self.determineDistanceFromCurrentPos(X,Z)/2)/R))
                 dist = theta * R
                 return(dist)
+    
     def sendDataAndReset(self) -> None:
         """returns all the current cycle data for logging and reset the cycle time"""
         if (self.cycleTime == 0 and self.deadCycleTime == 0) or len(self.toolName) <= 1:
@@ -227,13 +229,12 @@ class Biglia():
             dist = self.determineDistanceFromCurrentPos(X,Z,"linear")
             self.cycleTime += self.move_and_get_time(X,Z, dist,fast = False) #add the cycle time to the current time cycle
             
-        #G02 and G03 (time is bascaly the same lol)
+        #G02 and G03 (time is bascaly the same for either Gs)
         if self.currentCycle in ["G02", "G2", "G03", "G3"]:
             i = getParam(line, "I")
             j = getParam(line, "J")
             r = getParam(line, "R")
             
             dist = self.determineDistanceFromCurrentPos(X, Z, "circular", I = i, J = j, R = r)
-            print(X,Z,i,j,r,dist)
             if i or j or r:
                 self.cycleTime += self.move_and_get_time(X,Z, dist, fast = False)

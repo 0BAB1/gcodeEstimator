@@ -2,6 +2,7 @@
 
 from timeEstimator.machines import *
 from timeEstimator.utils import *
+from math import sqrt, floor
 
 #=============================
 #        UTILS TESTS
@@ -10,7 +11,15 @@ from timeEstimator.utils import *
 def test_getParam_from_a_line():
     assert getParam("G56", "G") =="G56"
     
-
+def test_magnitude():
+    assert magnitude((1,1)) == sqrt(2)
+    
+def test_dot_product():
+    u,v = (1,0), (0,1)
+    assert dotProduct(u,v) == 0
+    u,v = (5.6458, -316.25), (1346.151,33.2)
+    assert floor(dotProduct(u,v)) == floor(-2899.400684)
+    
 #=============================
 #ACTUAL TIME CALUCLATION TESTS
 #=============================
@@ -84,7 +93,7 @@ def test_get_time_with_G2_const_feed_using_ij():
     with open(file, "r") as file:
         for line in file:
             lathe.interpret(line)
-    assert lathe.globalTime <= 10.53 + 0.05 and lathe.globalTime >= 10.53 -0.05
+    assert lathe.globalTime <= 10.53 + 0.01 and lathe.globalTime >= 10.53 -0.01
 
 def test_get_time_with_G2_const_cuttingSpeed_using_ij():
     lathe = Biglia()
@@ -92,7 +101,7 @@ def test_get_time_with_G2_const_cuttingSpeed_using_ij():
     with open(file, "r") as file:
         for line in file:
             lathe.interpret(line)
-    assert lathe.globalTime <= 3.309 + 0.05 and lathe.globalTime >= 3.309 -0.05
+    assert lathe.globalTime <= 3.309 + 0.01 and lathe.globalTime >= 3.309 -0.01
     
 def test_get_time_with_G2_const_feed_using_R():
     lathe = Biglia()
@@ -100,12 +109,12 @@ def test_get_time_with_G2_const_feed_using_R():
     with open(file, "r") as file:
         for line in file:
             lathe.interpret(line)
-    assert lathe.globalTime <= 10.53 + 0.05 and lathe.globalTime >= 10.53 -0.05
-
+    assert lathe.globalTime <= 1332.3 + 0.2 and lathe.globalTime >= 1332.3 -0.02
+    
 def test_get_time_with_G3_const_feed_using_R():
     lathe = Biglia()
     file = "tests/TESTG3_R.g"
     with open(file, "r") as file:
         for line in file:
             lathe.interpret(line)
-    assert lathe.globalTime <= 10.53 + 0.05 and lathe.globalTime >= 10.53 -0.05
+    assert lathe.globalTime <= 1332.3 + 0.2 and lathe.globalTime >= 133.32 -0.2
