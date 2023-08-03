@@ -77,15 +77,34 @@ def test_program_variable():
     
     assert lathe.globalTime >= normaltime - 0.05 and lathe.globalTime <= normaltime + 0.05
     
-def test_get_time_with_G71():
-    """G71 : ébauche axiale """
-    
-def test_get_time_with_G2():
-    """constant constant face speed is used (ie VC is on)"""
-    #Add G2 and G3 support in the end, for now it is just a simple *1.5 on the base G1 value
-    ...
+def test_get_time_with_G2_const_feed_using_ij():
+    lathe = Biglia()
+    file = "tests/TESTG2_IJ_F_CST.g"
+    with open(file, "r") as file:
+        for line in file:
+            lathe.interpret(line)
+    assert lathe.globalTime <= 10.53 + 0.05 and lathe.globalTime >= 10.53 -0.05
 
-def test_get_time_with_G3():
-    """constant feed is used beacause why not after all ?"""
-    #Add G2 and G3 support in the end, for now it is just a simple *1.5 on the base G1 value
-    ...
+def test_get_time_with_G2_const_cuttingSpeed_using_ij():
+    lathe = Biglia()
+    file = "tests/TESTG2_IJ_VC_CST.g"
+    with open(file, "r") as file:
+        for line in file:
+            lathe.interpret(line)
+    assert lathe.globalTime <= 3.309 + 0.05 and lathe.globalTime >= 3.309 -0.05
+    
+def test_get_time_with_G2_const_feed_using_R():
+    lathe = Biglia()
+    file = "tests/TESTG2_R.g"
+    with open(file, "r") as file:
+        for line in file:
+            lathe.interpret(line)
+    assert lathe.globalTime <= 10.53 + 0.05 and lathe.globalTime >= 10.53 -0.05
+
+def test_get_time_with_G3_const_feed_using_R():
+    lathe = Biglia()
+    file = "tests/TESTG3_R.g"
+    with open(file, "r") as file:
+        for line in file:
+            lathe.interpret(line)
+    assert lathe.globalTime <= 10.53 + 0.05 and lathe.globalTime >= 10.53 -0.05
