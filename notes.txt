@@ -12,4 +12,6 @@ G71 :
     - execute the G71 by mooving with dist N times
         - create a move_with_distance and use it (also voir pour sous-traiter)
 
+    POUR LINSTANT G71 CONSISTE EN : trouver distance moyenne et la repeter par le nombre de passes
+
 ne pas entrer dans le boucle de calcul (pour juste avoir 0) quand la lgne n'indique pas de de valeur, car la si il n'y a pas de X et Z, on assigne juste la psoition actuelle puis nous calculons tout pour trouver 0, c'est contre productif et resulte dans de sdifficulté lors d'implementation de nouveau codes g

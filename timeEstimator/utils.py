@@ -1,7 +1,7 @@
 import string
 from math import sqrt
 
-def getParam(line: str , parameter: str , vars : dict = {}) -> str:
+def getParam(line: str , parameter: str , vars : dict = {}) -> float:
     """Returns the FIRST parameter in the G code line with it's value, if the parameter does not exists it returns None"""
     letters = list(string.ascii_uppercase)
     
@@ -18,16 +18,16 @@ def getParam(line: str , parameter: str , vars : dict = {}) -> str:
                         #if we have a variable
                         if "#" in param and "[" in param:
                             param = param[0] + getValueFromVariableQuery(param[1:], vars)
-                        return param
+                        return float(param[1:])
                 except :
                     #if we go out of index, it means we are a the end of a line
                     param = line[i:j+i+1].strip()
                     #if we have a variable
                     if "#" in param and "[" in param:
                         param = param[0] + getValueFromVariableQuery(param[1:], vars)
-                    return param
+                    return float(param[1:].replace(",",""))
                 
-    return None
+    return 0
                 
 def getValueFromVariableQuery(line : str, vars : dict = {}) -> str:
     #get a nice format to treat : [element1, element2, element3, ....]
@@ -63,7 +63,7 @@ def getVar(line : str) -> tuple :
                     #if we go out of index, it means we are a the end of a line
                     return (line[i:j+i+1].strip(), line[j+i+2:].strip())
 
-def magnitude(v : tuple):
+def magnitude(v : tuple) -> float:
     """returns the magnitude of a 2d vector"""
     return sqrt(v[0]**2+v[1]**2)
 

@@ -1,4 +1,4 @@
-from math import sqrt, pi, cos, acos, asin
+from math import sqrt, pi,  acos, asin, floor
 from .utils import *
 import re
 
@@ -16,7 +16,7 @@ class Biglia():
         self.toolName = ""
         
         self.isProfileDefinitionTakingPlace = False # if we are in a cycle that requires a definition of a profile
-        self.profileLenght = 0 #we also store the profile lenght
+        self.profileData = {}
         
         self.variables = {}
         
@@ -29,29 +29,32 @@ class Biglia():
     
     def move_and_get_time(self, X,Z, distance, fast = False) -> float:
         """moves the tool to its new position in a linear trajectory. returns the necessary time"""
-
-        #determine the speed depending on the machinning factors
-            
-        #=== speed setter ===
         
-        if not self.perRevolutionFeed :
-            speed = self.feed
-        elif self.isRotationConstant:
-            speed = self.rotation * self.feed
-        elif not fast and not self.isRotationConstant:
-            D_moyen = X + self.position[0]
-            rot_moyen = 1000 * self.cuttingSpeed / (pi * D_moyen)
-            if rot_moyen > self.maxRotation : rot_moyen = self.maxRotation
-            speed = rot_moyen * self.feed
-                
         #=== distance setter ===
-            
-        #dist = sqrt((X-self.position[0])**2 + (Z-self.position[1])**2)
+        
         dist = distance
         
         if fast:
+            
             time = dist / self.maxSpeed
+            
         elif not fast:
+            
+            #=== speed setter ===
+            
+            #determine the speed depending on the machinning factors
+            if not self.perRevolutionFeed :
+                speed = self.feed
+                print(self.feed)
+            elif self.isRotationConstant:
+                speed = self.rotation * self.feed
+                print(self.rotation, self.feed)
+            elif not fast and not self.isRotationConstant:
+                D_moyen = X + self.position[0]
+                rot_moyen = 1000 * self.cuttingSpeed / (pi * D_moyen)
+                if rot_moyen > self.maxRotation : rot_moyen = self.maxRotation
+                speed = rot_moyen * self.feed
+                
             time = dist / speed
             
         self.position = (X,Z)
@@ -74,18 +77,6 @@ class Biglia():
                     R = None
                     
             if not R: #if we are using I and J to calc our distance
-                #set vars to floats and 0 if not set
-                if I and not J :
-                    J = 0
-                    I = float(I[1:])
-                elif J and not I :
-                    I = 0
-                    J = float(J[1:])
-                elif I and J:
-                    I = float(I[1:])
-                    J = float(J[1:])
-                elif not I and not J: return
-            
                 #then the math begins :
                 #determine u and v vectors (to old and new pos)
                 u = (-I + self.position[0], -J + self.position[1])
@@ -102,7 +93,6 @@ class Biglia():
                 #determine the distance by multiplying
             elif not R == None:
                 #if we using the radius to code the G2/3 interpolation :
-                R = float(R[1:])
                 #check if valid (determine R and apply 2R > distance)
                 if 2 * R < self.determineDistanceFromCurrentPos(X,Z):
                     raise ValueError("you use a too small value of R in your program, resulting in an impossible profile")
@@ -134,7 +124,7 @@ class Biglia():
         #   TOOL NAME GETTER 
         #=====================
         
-        T = getParam(line, "T")
+        T = "T" + str(getParam(line, "T")) #T0101 for exemple
         
         if T != None:
             self.toolName = T
@@ -147,8 +137,8 @@ class Biglia():
         
         F = getParam(line, "F")
         
-        if F != None and F != "":
-            self.feed = float(F[1:])
+        if F != 0:
+            self.feed = F
         
         #=====================
         # G CODES INTERPRETER
@@ -156,8 +146,9 @@ class Biglia():
         
         #we get the current cycle so we can spread it across lines
         G = getParam(line, "G")
-        if G != None and G != self.currentCycle and "G" in G:
-            self.currentCycle = G
+        if "G" in line:
+            self.currentCycle = "G" + str(int(G))
+        print(self.currentCycle)
             
         #and now, we cover all G codes possibilities...
         
@@ -177,20 +168,21 @@ class Biglia():
             S = getParam(line, "S")
             if S:
                 self.isRotationConstant = True
-                self.rotation = float(S[1:])
+                self.rotation = S
+                print(S)
                 
         #G92 here, maximum rotation speed rate
         if "G92" in line:
             S = getParam(line, "S")
             if S:
-                self.maxRotation = float(S[1:])
+                self.maxRotation = S
                 
         #G96 tells us we use cutting speed to move the  tool
         if "G96" in line:
             S = getParam(line, "S")
             if S:
                 self.isRotationConstant = False
-                self.cuttingSpeed = float(S[1:])
+                self.cuttingSpeed = S
         
         #-----------------------------
         # Machinning cycles G getters
@@ -204,20 +196,29 @@ class Biglia():
         #=====position setter =======
         
         #a little dirty but who cares really ? it was a quick fix. maybe do it a little better and rework the "param getting" when i have the time
-        if not X and U:
-            X = self.position[0] + float(U[1:])
-        elif not X and not U:
+        
+        # if not X and U:
+        #     X = self.position[0] + U
+        # elif not X and not U:
+        #     X = self.position[0]
+        # elif X:
+        #     X = float(X[1:].replace(",",""))
+            
+        if X == 0 :
             X = self.position[0]
-        elif X:
-            X = float(X[1:].replace(",",""))
+        X += U
+        
             
-            
-        if not Z and W:
-            Z = self.position[1] + float(W[1:])
-        elif Z and not W:
-            Z = float(Z[1:].replace(",",""))
-        elif not Z and not W:
+        # if not Z and W:
+        #     Z = self.position[1] + float(W[1:])
+        # elif Z and not W:
+        #     Z = float(Z[1:].replace(",",""))
+        # elif not Z and not W:
+        #     Z = self.position[1]
+        
+        if Z == 0 :
             Z = self.position[1]
+        Z += W
             
         #G0 : fast linear interpolation
         if self.currentCycle in ["G00", "G0"]:
@@ -238,3 +239,7 @@ class Biglia():
             dist = self.determineDistanceFromCurrentPos(X, Z, "circular", I = i, J = j, R = r)
             if i or j or r:
                 self.cycleTime += self.move_and_get_time(X,Z, dist, fast = False)
+        
+        #G71
+        if self.currentCycle in ["G71"]:
+            self.isProfileDefinitionTakingPlace = True
