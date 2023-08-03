@@ -27,23 +27,10 @@ class Biglia():
         self.csvData = {} #to return at the end later on
         self.globalTime = 0.0  #to return for testing purpuses
     
-    def move_and_get_time_linear(self, new_pos, fast = False) -> float:
+    def move_and_get_time(self, X,Z, distance, fast = False) -> float:
         """moves the tool to its new position in a linear trajectory. returns the necessary time"""
-        X = new_pos[0]
-        Z = new_pos[1]
 
         #determine the speed depending on the machinning factors
-            
-        #=====position setter =======
-        if not X :
-            X = self.position[0]
-        else :
-            X = float(X[1:].replace(",",""))
-            
-        if not Z :
-            Z = self.position[1]
-        else :
-            Z = float(Z[1:].replace(",",""))
             
         #=== speed setter ===
         
@@ -59,7 +46,8 @@ class Biglia():
                 
         #=== distance setter ===
             
-        dist = sqrt((X-self.position[0])**2 + (Z-self.position[1])**2)
+        #dist = sqrt((X-self.position[0])**2 + (Z-self.position[1])**2)
+        dist = distance
         
         if fast:
             time = dist / self.maxSpeed
@@ -69,6 +57,11 @@ class Biglia():
         self.position = (X,Z)
         self.globalTime += time*60
         return time*60 #return seconds
+    
+    def determineDistanceFromCurrentPos(self, X : float = 0, Z : float = 0, kind : str = "linear", *args, **kwargs) -> float:
+        """determine distance from the current lathe's position to the new point"""
+        if kind == "linear":
+            return sqrt((X-self.position[0])**2 + (Z-self.position[1])**2)
     
     def sendDataAndReset(self) -> None:
         """returns all the current cycle data for logging and reset the cycle time"""
@@ -159,17 +152,34 @@ class Biglia():
         Z = getParam(line, "Z", self.variables)
         U = getParam(line, "U", self.variables)
         W = getParam(line, "W", self.variables)
+            
+        #=====position setter =======
         
         #a little dirty but who cares really ? it was a quick fix. maybe do it a little better and rework the "param getting" when i have the time
         if not X and U:
-            X = "X" + str(self.position[0] + float(U[1:]))
+            X = self.position[0] + float(U[1:])
+        elif not X and not U:
+            X = self.position[0]
+        elif X:
+            X = float(X[1:].replace(",",""))
+            
+            
         if not Z and W:
-            Z = "Z" + str(self.position[1] + float(W[1:]))
+            Z = self.position[1] + float(W[1:])
+        elif Z and not W:
+            Z = float(Z[1:].replace(",",""))
+        elif not Z and not W:
+            Z = self.position[1]
+        
+        print(line)  
+        print(X,Z,U,W)
             
         #G0 : fast linear interpolation
         if self.currentCycle in ["G00", "G0"]:
-            self.deadCycleTime += self.move_and_get_time_linear((X,Z), fast = True) #add the cycle time to the current time cycle
+            dist = self.determineDistanceFromCurrentPos(X,Z,"linear")
+            self.deadCycleTime += self.move_and_get_time(X,Z, dist,fast = True) #add the cycle time to the current time cycle
             
         #G01 : linear mouvement
         if self.currentCycle in ["G01", "G1"]:
-            self.cycleTime += self.move_and_get_time_linear((X,Z), fast = False) #add the cycle time to the current time cycle
+            dist = self.determineDistanceFromCurrentPos(X,Z,"linear")
+            self.cycleTime += self.move_and_get_time(X,Z, dist,fast = False) #add the cycle time to the current time cycle
