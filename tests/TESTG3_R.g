@@ -1,0 +1,7 @@
+M06 T0101
+
+G0X0Z0
+
+G3X10Z20R11.18G94F200
+
+(temps éstimé : 10.53 secondes)
