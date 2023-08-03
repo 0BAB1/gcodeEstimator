@@ -1,4 +1,4 @@
-"""I suggest you use pytest to execute this code"""
+"""I suggest you use pytest to execute this code => $> python -m pytest test.py"""
 
 from timeEstimator.machines import *
 from timeEstimator.utils import *
@@ -9,6 +9,7 @@ from timeEstimator.utils import *
 
 def test_getParam_from_a_line():
     assert getParam("G56", "G") =="G56"
+    
 
 #=============================
 #ACTUAL TIME CALUCLATION TESTS

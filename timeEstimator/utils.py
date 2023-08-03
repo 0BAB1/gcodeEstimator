@@ -1,4 +1,5 @@
 import string
+from math import sqrt
 
 def getParam(line: str , parameter: str , vars : dict = {}) -> str:
     """Returns the FIRST parameter in the G code line with it's value, if the parameter does not exists it returns None"""
@@ -61,4 +62,11 @@ def getVar(line : str) -> tuple :
                 except :
                     #if we go out of index, it means we are a the end of a line
                     return (line[i:j+i+1].strip(), line[j+i+2:].strip())
-    
+
+def magnitude(v : tuple):
+    """returns the magnitude of a 2d vector"""
+    return sqrt(v[0]**2+v[1]**2)
+
+def dotProduct(u : tuple,v : tuple) -> float:
+    """return the dot product of two 2d vector"""
+    return u[0] * v[0] + u[1] * v[1]
