@@ -119,3 +119,11 @@ def test_get_time_with_G3_const_feed_using_R():
         for line in file:
             lathe.interpret(line)
     assert lathe.globalTime <= 1332.3 + 0.2 and lathe.globalTime >= 133.32 -0.2
+    
+def test_get_time_with_G71():
+    lathe = Biglia()
+    file = "tests/TESTG71.g"
+    with open(file, "r") as file:
+        for line in file:
+            lathe.interpret(line)
+    assert lathe.globalTime <= 57 + 2 and lathe.globalTime >= 57 - 2

@@ -4,4 +4,4 @@ G96S200M3
 
 G0X20Z0
 (G1G95X30Z20F0.2 ceci est un test)
-G1G95X30Z20F0.2 (test)
+G1 G95 X30 Z20 F0.2 (test)
