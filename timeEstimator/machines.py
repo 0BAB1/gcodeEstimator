@@ -1,4 +1,4 @@
-from math import sqrt, pi
+from math import sqrt, pi, cos, acos, asin
 from .utils import *
 import re
 
@@ -62,7 +62,53 @@ class Biglia():
         """determine distance from the current lathe's position to the new point"""
         if kind == "linear":
             return sqrt((X-self.position[0])**2 + (Z-self.position[1])**2)
-    
+        
+        if kind == "circular":
+            I = kwargs["I"]
+            J = kwargs["J"]
+            R = kwargs["R"]
+            
+            if I or J:
+                if not R == None:
+                    #ignonore R by dfault if I or J is set (or both btw)
+                    R = None
+                    
+            if not R: #if we are using I and J to calc our distance
+                #set vars to floats and 0 if not set
+                if I and not J :
+                    J = 0
+                    I = float(I[1:])
+                elif J and not I :
+                    I = 0
+                    J = float(J[1:])
+                elif I and J:
+                    I = float(I[1:])
+                    J = float(J[1:])
+                elif not I and not J: return
+            
+                #then the math begins :
+                #determine u and v vectors (to old and new pos)
+                u = (-J + self.position[0], -I + self.position[1])
+                v = (X - J, Z - I)
+                #check if valid (determine R and apply 2R > distance)
+                if 2 * min(magnitude(u), magnitude(v)) < self.determineDistanceFromCurrentPos(X,Z):
+                    raise ValueError("incorrect I and J values in code resulting in an impossible profile, please check yout program or use R")
+                
+                #determine theta, the angle, always between old and new one
+                theta = acos(dotProduct(u,v)/(magnitude(u)*magnitude(v)))
+                dist = theta * magnitude(v) #here, magnitude(u) == magnitude(v) == R, the radius
+                return dist
+                #determine the distance by multiplying
+            elif not R == None:
+                #if we using the radius to code the G2/3 interpolation :
+                R = float(R[1:])
+                #check if valid (determine R and apply 2R > distance)
+                if 2 * R < self.determineDistanceFromCurrentPos(X,Z):
+                    raise ValueError("you use a too small value of R in your program, resulting in an impossible profile")
+                #determine theta (cf formula on paper)
+                theta = 2 * (asin((self.determineDistanceFromCurrentPos(X,Z)/2)/R))
+                dist = theta * R
+                return(dist)
     def sendDataAndReset(self) -> None:
         """returns all the current cycle data for logging and reset the cycle time"""
         if (self.cycleTime == 0 and self.deadCycleTime == 0) or len(self.toolName) <= 1:
@@ -170,9 +216,6 @@ class Biglia():
             Z = float(Z[1:].replace(",",""))
         elif not Z and not W:
             Z = self.position[1]
-        
-        print(line)  
-        print(X,Z,U,W)
             
         #G0 : fast linear interpolation
         if self.currentCycle in ["G00", "G0"]:
@@ -183,3 +226,14 @@ class Biglia():
         if self.currentCycle in ["G01", "G1"]:
             dist = self.determineDistanceFromCurrentPos(X,Z,"linear")
             self.cycleTime += self.move_and_get_time(X,Z, dist,fast = False) #add the cycle time to the current time cycle
+            
+        #G02 and G03 (time is bascaly the same lol)
+        if self.currentCycle in ["G02", "G2", "G03", "G3"]:
+            i = getParam(line, "I")
+            j = getParam(line, "J")
+            r = getParam(line, "R")
+            
+            dist = self.determineDistanceFromCurrentPos(X, Z, "circular", I = i, J = j, R = r)
+            print(X,Z,i,j,r,dist)
+            if i or j or r:
+                self.cycleTime += self.move_and_get_time(X,Z, dist, fast = False)
