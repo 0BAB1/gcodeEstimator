@@ -1,4 +1,4 @@
-from math import sqrt, pi,  acos, asin, floor
+from math import sqrt, pi,  acos, asin
 from .utils import *
 import re
 
@@ -45,10 +45,8 @@ class Biglia():
             #determine the speed depending on the machinning factors
             if not self.perRevolutionFeed :
                 speed = self.feed
-                print(self.feed)
             elif self.isRotationConstant:
                 speed = self.rotation * self.feed
-                print(self.rotation, self.feed)
             elif not fast and not self.isRotationConstant:
                 D_moyen = X + self.position[0]
                 rot_moyen = 1000 * self.cuttingSpeed / (pi * D_moyen)
@@ -70,8 +68,9 @@ class Biglia():
             I = kwargs["I"]
             J = kwargs["J"]
             R = kwargs["R"]
+            print(I,J,R)
             
-            if I or J:
+            if not I == 0 or not J == 0:
                 if not R == None:
                     #ignonore R by dfault if I or J is set (or both btw)
                     R = None
@@ -87,7 +86,7 @@ class Biglia():
                     raise ValueError("incorrect I and J values in code resulting in an impossible profile, please check yout program or use R")
                 
                 #determine theta, the angle, always between old and new one
-                theta = acos(dotProduct(u,v)/(magnitude(u)*magnitude(v)))
+                theta = acos(round(dotProduct(u,v)/(magnitude(u)*magnitude(v)),3))
                 dist = theta * magnitude(v) #here, magnitude(u) == magnitude(v) == R, the radius
                 return dist
                 #determine the distance by multiplying
@@ -95,7 +94,8 @@ class Biglia():
                 #if we using the radius to code the G2/3 interpolation :
                 #check if valid (determine R and apply 2R > distance)
                 if 2 * R < self.determineDistanceFromCurrentPos(X,Z):
-                    raise ValueError("you use a too small value of R in your program, resulting in an impossible profile")
+                    print("WARNING ! R was too small and has been adjusted from %.2f to %.2f" % (R, 0.1 + self.determineDistanceFromCurrentPos(X,Z)/2))
+                    R = 0.1 + self.determineDistanceFromCurrentPos(X,Z)/2
                 #determine theta (cf formula on paper)
                 theta = 2 * (asin((self.determineDistanceFromCurrentPos(X,Z)/2)/R))
                 dist = theta * R
@@ -124,12 +124,14 @@ class Biglia():
         #   TOOL NAME GETTER 
         #=====================
         
-        T = "T" + str(getParam(line, "T")) #T0101 for exemple
-        
-        if T != None:
-            self.toolName = T
-            #if this is a new tool, we return the tool times and procced to treat the next
-            #HERE SHOUL ADD A NEW ENTRY TO THE DATA DICT
+        try:
+            T = "T" + str(getParam(line, "T")) #T0101 for exemple
+            if T != None:
+                self.toolName = T
+        except:
+            ... #some times bugged on "GOTO" lines
+        #if this is a new tool, we return the tool times and procced to treat the next
+        #HERE SHOUL ADD A NEW ENTRY TO THE DATA DICT
             
         #=====================
         #  FEED SPEED GETTER
@@ -145,10 +147,12 @@ class Biglia():
         #=====================
         
         #we get the current cycle so we can spread it across lines
-        G = getParam(line, "G")
-        if "G" in line:
-            self.currentCycle = "G" + str(int(G))
-        print(self.currentCycle)
+        try :
+            G = getParam(line, "G")
+            if "G" in line:
+                self.currentCycle = "G" + str(int(G))
+        except:
+            ... #some times bugged on "GOTO" lines
             
         #and now, we cover all G codes possibilities...
         
@@ -169,7 +173,6 @@ class Biglia():
             if S:
                 self.isRotationConstant = True
                 self.rotation = S
-                print(S)
                 
         #G92 here, maximum rotation speed rate
         if "G92" in line:
@@ -242,4 +245,4 @@ class Biglia():
         
         #G71
         if self.currentCycle in ["G71"]:
-            self.isProfileDefinitionTakingPlace = True
+            ...#initialises data and get ready to define profile, then follow the paper's technique
