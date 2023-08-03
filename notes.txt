@@ -1,12 +1,8 @@
-add a get paramsDict functionfor line with multiple G code and extract lathes cycle  and cutting speeds from it etc... 
+!!! REDO GET PRAMS TO ONLY RETURN INT VALUE TO SIMPLY STUF !!!! (after g2 / g3 or g71 implementation)
 
 redispatcher le code en fonctions dans utils pour clear un peu le code de machines.py
 
 utiliser un michier machine.conf pour configurer la machine
-
-coder un interpreteur fraiseuse en +
-
-add g2 et g3 interpreteur
 
 G71 :
     - see if profile definition is taking PLACE
@@ -15,3 +11,5 @@ G71 :
         - create a G2 and G3 distance approx, first xith R and then with I, J,K cas de figure
     - execute the G71 by mooving with dist N times
         - create a move_with_distance and use it (also voir pour sous-traiter)
+
+ne pas entrer dans le boucle de calcul (pour juste avoir 0) quand la lgne n'indique pas de de valeur, car la si il n'y a pas de X et Z, on assigne juste la psoition actuelle puis nous calculons tout pour trouver 0, c'est contre productif et resulte dans de sdifficulté lors d'implementation de nouveau codes g
