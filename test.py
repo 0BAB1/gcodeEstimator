@@ -9,7 +9,8 @@ from math import sqrt, floor
 #=============================
 
 def test_getParam_from_a_line():
-    assert getParam("G56", "G") =="G56"
+    assert getParam("G56,", "G") == 56
+    assert getParam("G56,", "U") == 0
     
 def test_magnitude():
     assert magnitude((1,1)) == sqrt(2)
@@ -65,7 +66,7 @@ def test_get_time_with_G94_or_G98_constantFeed():
     assert lathe.globalTime >= 21-0.1
     assert lathe.globalTime <= 21+0.1
 
-def test_get__time_incremental_position():
+def test_get_time_incremental_position():
     """uses the same as tests/TESTG0.g code for a dist of 600 but using U, W, incremental values for positionning"""
     lathe = Biglia()
     file = "tests/TEST_INCREMENTAL.g"
