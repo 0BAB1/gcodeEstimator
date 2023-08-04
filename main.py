@@ -2,7 +2,7 @@ from timeEstimator.machines import Biglia
 
 lathe = Biglia()
 
-filename = "G.g"
+filename = "912.g"
 
 i= 0
 

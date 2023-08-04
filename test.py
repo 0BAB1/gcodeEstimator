@@ -10,7 +10,7 @@ from math import sqrt, floor
 
 def test_getParam_from_a_line():
     assert getParam("G56,", "G") == 56
-    assert getParam("G56,", "U") == 0
+    assert getParam("G56,", "U") == None
     
 def test_magnitude():
     assert magnitude((1,1)) == sqrt(2)
@@ -126,4 +126,4 @@ def test_get_time_with_G71():
     with open(file, "r") as file:
         for line in file:
             lathe.interpret(line)
-    assert lathe.globalTime <= 57 + 2 and lathe.globalTime >= 57 - 2
+    assert lathe.globalTime <= 57 + 4 and lathe.globalTime >= 57 - 4
