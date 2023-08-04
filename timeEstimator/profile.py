@@ -18,9 +18,6 @@ class Profil():
             totalX += abs(DX)
             totalZ += abs(DZ*DX)
             
-            print(self.points[i][1] ,DZ, totalZ, DX)
-        
-        print("total : ", totalZ, totalX, "mean : ", totalZ/totalX)
         #after verification : function looks good and problem comes from initalZ and is interprestation
         return abs(totalZ/totalX)
                         
@@ -34,4 +31,5 @@ class Profil():
             if point [0] > highest : highest = point[0]
         
         return floor((highest - lowest)/self.deltaPasses)
+    
         

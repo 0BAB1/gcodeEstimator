@@ -4,7 +4,7 @@ from .utils import *
 import re
 
 class Biglia():
-    """go inside machine.py to configure the lathe to correspond to your lathe's specifications"""
+    """go inside machine.py to configure the lathe to correspond to your lathe's specifications, i suggest you review this code and copy this class to modify it and suit you type of lathe's configuration"""
     def __init__(self) -> None:
         self.lineNumber = 0 #the number of the line being interpreted
         
@@ -162,6 +162,8 @@ class Biglia():
                 self.cuttingSpeed = S
                 
         #G28 tells to return to reference point
+        if "G28" in line :
+            self.position = (0,0)
             
         #=====================
         # PROFILE DEFINITION
@@ -189,8 +191,6 @@ class Biglia():
                     
                     if X == None : X = self.Profil.points[-1][0]
                     if Z == None : Z = self.Profil.points[-1][1]
-                    
-                    print()
                     #move and makes the passes
                     self.cycleTime += self.move_and_get_time(X , Z, dist, fast = False)
                     #also make fasts passes
@@ -293,4 +293,12 @@ class Biglia():
             if "G71" in line or "G72" in line:
                 self.Profil.isDefinitionTakingPlace = True
                 self.Profil.deltaPasses = getParam(line, "U")
-                print("in", self.cycleTime/60, self.lineNumber)
+            
+            
+        if self.currentCycle in ["G74"] :
+            #the peck drilling, we estimate the peck to be negligeable, if they are not, then please review your Gcode because you are not doing it right
+            Z = getParam(line, "Z")
+            if not Z == None:
+                X = self.position[0]
+                dist = abs(self.position[1]-Z)
+                self.cycleTime += self.move_and_get_time(X,Z, dist, fast = False)
