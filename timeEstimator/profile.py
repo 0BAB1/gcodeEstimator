@@ -34,7 +34,4 @@ class Profil():
             if point [0] > highest : highest = point[0]
         
         return floor((highest - lowest)/self.deltaPasses)
-
-    def add_point(self, point : tuple) -> None:
-        """adds the point the the profile """
         
