@@ -102,15 +102,6 @@ class Biglia():
                 dist = theta * R
                 return(dist)
     
-    def sendDataAndReset(self) -> None:
-        """returns all the current cycle data for logging and reset the cycle time"""
-        if (self.cycleTime == 0 and self.deadCycleTime == 0) or len(self.toolName) <= 1:
-            return
-        #print(self.toolName + " => " + str(self.cycleTime + self.deadCycleTime) + " seconds")
-        self.cycleTime = 0
-        self.deadCycleTime = 0
-        return
-    
     def interpret(self, line):
         """get a line, interprets it and stores toolname, op type and time for csv indentation in its (the lathe) inernal dataset"""
         
@@ -218,19 +209,6 @@ class Biglia():
                 self.Profil.points.append((X,Z))
             
             return #passer a la ligne suivante sans interpreter le reste
-            
-        #=====================
-        #  TOOL NAME GETTER 
-        #=====================
-        
-        try:
-            T = "T" + str(getParam(line, "T")) #T0101 for exemple
-            if T != None:
-                self.toolName = T
-        except:
-            ... #some times bugged on "GOTO" lines
-        #if this is a new tool, we return the tool times and procced to treat the next
-        #HERE SHOUL ADD A NEW ENTRY TO THE DATA DICT
         
         #=====================
         # G CODES INTERPRETER
@@ -302,3 +280,25 @@ class Biglia():
                 X = self.position[0]
                 dist = abs(self.position[1]-Z)
                 self.cycleTime += self.move_and_get_time(X,Z, dist, fast = False)
+            
+        #=====================
+        #  TOOL NAME GETTER 
+        #=====================
+        
+        try:
+            T = getParam(line, "T")
+            if T != None:
+                T = "T" + str(T).replace(".","") #T0101 for exemple
+                #========INSERT CSV DATA LINE==========
+                print(self.cycleTime , line)
+                self.csvData[self.toolName] = str(self.cycleTime + self.deadCycleTime)
+                
+                #====== RESET DATA FOR NEXT TOOL ======
+                self.toolName = T
+                self.cycleTime = 0
+                self.deadCycleTime
+        except:
+            ... #some times bugged on "GOTO" lines
+            
+        #if this is a new tool, we return the tool times and procced to treat the next
+        #HERE SHOUL ADD A NEW ENTRY TO THE DATA DICT
