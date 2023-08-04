@@ -127,3 +127,12 @@ def test_get_time_with_G71():
         for line in file:
             lathe.interpret(line)
     assert lathe.globalTime <= 57 + 4 and lathe.globalTime >= 57 - 4
+    
+def test_get_time_with_G74():
+    """peck drilling test"""
+    lathe = Biglia()
+    file = "tests/TESTG74.g"
+    with open(file, "r") as file:
+        for line in file:
+            lathe.interpret(line)
+    assert lathe.globalTime <= 6 + 0.1 and lathe.globalTime >= 6 - 0.1
