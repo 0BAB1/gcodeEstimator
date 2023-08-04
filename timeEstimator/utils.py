@@ -4,7 +4,6 @@ from math import sqrt
 def getParam(line: str , parameter: str , vars : dict = {}) -> float:
     """Returns the FIRST parameter in the G code line with it's value, if the parameter does not exists it returns None"""
     letters = list(string.ascii_uppercase)
-    
     for i in range(len(line)):
         
         if line[i] == parameter:
@@ -27,7 +26,7 @@ def getParam(line: str , parameter: str , vars : dict = {}) -> float:
                         param = param[0] + getValueFromVariableQuery(param[1:], vars)
                     return float(param[1:].replace(",",""))
                 
-    return 0
+    return None
                 
 def getValueFromVariableQuery(line : str, vars : dict = {}) -> str:
     #get a nice format to treat : [element1, element2, element3, ....]
@@ -58,10 +57,12 @@ def getVar(line : str) -> tuple :
                 try :
                     #so we loop until we fing a letter, by definition not a value
                     if remaining[j+1] == "=":
-                        return (line[i:j+i+1].strip(), line[j+i+2:].strip())
+                        var = (line[i:j+i+1].strip(), line[j+i+2:].strip())
+                        return var
                 except :
                     #if we go out of index, it means we are a the end of a line
-                    return (line[i:j+i+1].strip(), line[j+i+2:].strip())
+                    var = (line[i:j+i+1].strip(), line[j+i+2:].strip())
+                    return var
 
 def magnitude(v : tuple) -> float:
     """returns the magnitude of a 2d vector"""

@@ -1,10 +1,13 @@
 from math import sqrt, pi,  acos, asin
+from .profile import Profil
 from .utils import *
 import re
 
 class Biglia():
     """go inside machine.py to configure the lathe to correspond to your lathe's specifications"""
     def __init__(self) -> None:
+        self.lineNumber = 0 #the number of the line being interpreted
+        
         self.position = (0,0) # mm x,z
         self.cuttingSpeed = 0 #m/min
         self.feed = 0 #mm/tour
@@ -15,8 +18,7 @@ class Biglia():
         self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
         self.toolName = ""
         
-        self.isProfileDefinitionTakingPlace = False # if we are in a cycle that requires a definition of a profile
-        self.profileData = {}
+        self.Profil = Profil()
         
         self.variables = {}
         
@@ -52,7 +54,7 @@ class Biglia():
                 rot_moyen = 1000 * self.cuttingSpeed / (pi * D_moyen)
                 if rot_moyen > self.maxRotation : rot_moyen = self.maxRotation
                 speed = rot_moyen * self.feed
-                
+
             time = dist / speed
             
         self.position = (X,Z)
@@ -68,7 +70,6 @@ class Biglia():
             I = kwargs["I"]
             J = kwargs["J"]
             R = kwargs["R"]
-            print(I,J,R)
             
             if not I == 0 or not J == 0:
                 if not R == None:
@@ -113,25 +114,12 @@ class Biglia():
     def interpret(self, line):
         """get a line, interprets it and stores toolname, op type and time for csv indentation in its (the lathe) inernal dataset"""
         
+        self.lineNumber +=1
+        
         line = re.sub("\(.*?\)","",line)
         var = getVar(line)
         if var:
             self.variables[var[0]] = var[1]
-        
-        #\/ \/ \/ \/ to treat variables : should add a dict "self.varibles" stocking vars id "[]" is detected in a non G line and then self.readVar() is called if a "[]" is detected in a G line\/ \/ \/ \/ 
-            
-        #=====================
-        #   TOOL NAME GETTER 
-        #=====================
-        
-        try:
-            T = "T" + str(getParam(line, "T")) #T0101 for exemple
-            if T != None:
-                self.toolName = T
-        except:
-            ... #some times bugged on "GOTO" lines
-        #if this is a new tool, we return the tool times and procced to treat the next
-        #HERE SHOUL ADD A NEW ENTRY TO THE DATA DICT
             
         #=====================
         #  FEED SPEED GETTER
@@ -139,22 +127,8 @@ class Biglia():
         
         F = getParam(line, "F")
         
-        if F != 0:
+        if not F == None:
             self.feed = F
-        
-        #=====================
-        # G CODES INTERPRETER
-        #=====================
-        
-        #we get the current cycle so we can spread it across lines
-        try :
-            G = getParam(line, "G")
-            if "G" in line:
-                self.currentCycle = "G" + str(int(G))
-        except:
-            ... #some times bugged on "GOTO" lines
-            
-        #and now, we cover all G codes possibilities...
         
         #-----------------------------
         #Cutting speeds G getters
@@ -186,6 +160,91 @@ class Biglia():
             if S:
                 self.isRotationConstant = False
                 self.cuttingSpeed = S
+                
+        #G28 tells to return to reference point
+            
+        #=====================
+        # PROFILE DEFINITION
+        #=====================
+        
+        if self.Profil.isDefinitionTakingPlace :
+            if "G71" in line: #this means we are in the second G71 line, so we get params from it
+                self.Profil.begin = int(getParam(line,"P"))
+                self.Profil.end = int(getParam(line, "Q"))
+            
+            N = getParam(line,"N")
+            if not N : #if there is no N in line, getParams returns None so we handle that
+                N = int(0)
+            else :
+                N = int(N)
+            
+            #if we are at the end of profile def, we determine everything
+            if not N == 0 and N == self.Profil.end:
+                self.Profil.isDefinitionTakingPlace = False
+                dist = self.Profil.get_mean_Z(self.position[1])
+                for i in range(self.Profil.get_number_of_passes()):
+                    #======PARAMS GETTER==========
+                    X = getParam(line,"X", self.variables)
+                    Z = getParam(line, "Z", self.variables)
+                    
+                    if X == None : X = self.Profil.points[-1][0]
+                    if Z == None : Z = self.Profil.points[-1][1]
+                    
+                    print()
+                    #move and makes the passes
+                    self.cycleTime += self.move_and_get_time(X , Z, dist, fast = False)
+                    #also make fasts passes
+                    self.cycleTime += self.move_and_get_time(X , Z, dist, fast=True)
+                
+                
+                self.Profil = Profil()
+            else:
+                #======PARAMS GETTER==========
+                X = getParam(line, "X", self.variables)
+                Z = getParam(line, "Z", self.variables)
+                        
+                if X == None :
+                    if len(self.Profil.points) >= 1:
+                        X = self.Profil.points[-1][0]
+                    else:
+                        X = self.position[0]
+                        
+                if Z == None :
+                    if len(self.Profil.points) >= 1:
+                        Z = self.Profil.points[-1][1]
+                    else:
+                        Z = self.position[1]
+                
+                self.Profil.points.append((X,Z))
+            
+            return #passer a la ligne suivante sans interpreter le reste
+            
+        #=====================
+        #  TOOL NAME GETTER 
+        #=====================
+        
+        try:
+            T = "T" + str(getParam(line, "T")) #T0101 for exemple
+            if T != None:
+                self.toolName = T
+        except:
+            ... #some times bugged on "GOTO" lines
+        #if this is a new tool, we return the tool times and procced to treat the next
+        #HERE SHOUL ADD A NEW ENTRY TO THE DATA DICT
+        
+        #=====================
+        # G CODES INTERPRETER
+        #=====================
+        
+        #we get the current cycle so we can spread it across lines
+        try :
+            G = getParam(line, "G")
+            if "G" in line:
+                self.currentCycle = "G" + str(int(G))
+        except:
+            ... #some times bugged on "GOTO" lines
+            
+        #and now, we cover all G codes possibilities...
         
         #-----------------------------
         # Machinning cycles G getters
@@ -198,36 +257,18 @@ class Biglia():
             
         #=====position setter =======
         
-        #a little dirty but who cares really ? it was a quick fix. maybe do it a little better and rework the "param getting" when i have the time
-        
-        # if not X and U:
-        #     X = self.position[0] + U
-        # elif not X and not U:
-        #     X = self.position[0]
-        # elif X:
-        #     X = float(X[1:].replace(",",""))
-            
-        if X == 0 :
-            X = self.position[0]
+        if X == None: X = self.position[0]
+        if not U : U = 0
         X += U
         
-            
-        # if not Z and W:
-        #     Z = self.position[1] + float(W[1:])
-        # elif Z and not W:
-        #     Z = float(Z[1:].replace(",",""))
-        # elif not Z and not W:
-        #     Z = self.position[1]
-        
-        if Z == 0 :
-            Z = self.position[1]
+        if Z == None: Z = self.position[1]
+        if not W : W = 0
         Z += W
             
         #G0 : fast linear interpolation
         if self.currentCycle in ["G00", "G0"]:
             dist = self.determineDistanceFromCurrentPos(X,Z,"linear")
             self.deadCycleTime += self.move_and_get_time(X,Z, dist,fast = True) #add the cycle time to the current time cycle
-            
         #G01 : linear mouvement
         if self.currentCycle in ["G01", "G1"]:
             dist = self.determineDistanceFromCurrentPos(X,Z,"linear")
@@ -239,10 +280,17 @@ class Biglia():
             j = getParam(line, "J")
             r = getParam(line, "R")
             
+            if not i : i = 0
+            if not j : j = 0
+            if not r : r = 0
+            
             dist = self.determineDistanceFromCurrentPos(X, Z, "circular", I = i, J = j, R = r)
             if i or j or r:
                 self.cycleTime += self.move_and_get_time(X,Z, dist, fast = False)
         
-        #G71
-        if self.currentCycle in ["G71"]:
-            ...#initialises data and get ready to define profile, then follow the paper's technique
+        #G71, G72 Stock removal turning/facing => this is an approx given at +-5seconds
+        if self.currentCycle in ["G71", "G72"]:
+            if "G71" in line or "G72" in line:
+                self.Profil.isDefinitionTakingPlace = True
+                self.Profil.deltaPasses = getParam(line, "U")
+                print("in", self.cycleTime/60, self.lineNumber)
