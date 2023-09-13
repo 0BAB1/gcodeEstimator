@@ -4,6 +4,7 @@ from .utils import *
 import re
 
 class FanucLathe():
+    """basic interpreter for fanuc biglia lathe gcode"""
     """represents the CNC machine from the BIGLIA brand (CNC fanus Gcode) go inside machine.py to configure the lathe to correspond to your lathe's specifications, i suggest you review this code and copy this class to modify it and suit you type of lathe's configuration"""
     def __init__(self) -> None:
         self.lineNumber = 0 #the number of the line being interpreted
