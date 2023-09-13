@@ -1,7 +1,7 @@
 import string
 from math import sqrt
 
-def getParam(line: str , parameter: str , vars : dict = {}) -> float:
+def getParam(line: str , parameter: str , vars : dict = {}, as_string : bool = False) -> float:
     """Returns the FIRST parameter in the G code line with it's value, if the parameter does not exists it returns None"""
     letters = list(string.ascii_uppercase)
     for i in range(len(line)):
@@ -17,6 +17,7 @@ def getParam(line: str , parameter: str , vars : dict = {}) -> float:
                         #if we have a variable
                         if "#" in param and "[" in param:
                             param = param[0] + getValueFromVariableQuery(param[1:], vars)
+                        if as_string : return param[1:]
                         return float(param[1:])
                 except :
                     #if we go out of index, it means we are a the end of a line
@@ -24,6 +25,7 @@ def getParam(line: str , parameter: str , vars : dict = {}) -> float:
                     #if we have a variable
                     if "#" in param and "[" in param:
                         param = param[0] + getValueFromVariableQuery(param[1:], vars)
+                    if as_string : return param[1:].replace(",","")
                     return float(param[1:].replace(",",""))
                 
     return None
@@ -44,7 +46,7 @@ def getValueFromVariableQuery(line : str, vars : dict = {}) -> str:
     
 def getVar(line : str) -> tuple :
     """return (varNumber, varValue)if var in line, else returns None"""
-    if not "#" in line or "G" in line or "X" in line or "Z" in line: return None
+    if not "#" in line or "G" in line or "X" in line or "Y" in line or "Z" in line: return None
     
     letters = list(string.ascii_uppercase)
     
@@ -65,9 +67,9 @@ def getVar(line : str) -> tuple :
                     return var
 
 def magnitude(v : tuple) -> float:
-    """returns the magnitude of a 2d vector"""
-    return sqrt(v[0]**2+v[1]**2)
+    """returns the magnitude of a 3d vector"""
+    return sqrt(v[0]**2+v[1]**2+v[2]**2)
 
 def dotProduct(u : tuple,v : tuple) -> float:
-    """return the dot product of two 2d vector"""
-    return u[0] * v[0] + u[1] * v[1]
+    """return the dot product of two 3d vector"""
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
