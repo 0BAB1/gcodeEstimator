@@ -3,12 +3,15 @@ from .profile import Profil
 from .utils import *
 import re
 
-class Biglia():
-    """go inside machine.py to configure the lathe to correspond to your lathe's specifications, i suggest you review this code and copy this class to modify it and suit you type of lathe's configuration"""
+class FanucLathe():
+    """represents the CNC machine from the BIGLIA brand (CNC fanus Gcode) go inside machine.py to configure the lathe to correspond to your lathe's specifications, i suggest you review this code and copy this class to modify it and suit you type of lathe's configuration"""
     def __init__(self) -> None:
         self.lineNumber = 0 #the number of the line being interpreted
         
-        self.position = (0,0) # mm x,z
+        #machinning parameters
+        self.posX = 0
+        self.posY = 0
+        self.posZ = 0
         self.cuttingSpeed = 0 #m/min
         self.feed = 0 #mm/tour
         self.perRevolutionFeed = True #IS SPEED ? mm/min si false
@@ -17,6 +20,8 @@ class Biglia():
         self.maxRotation = 99999999#G92
         self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
         self.toolName = ""
+        #actual speed
+        self.speed = 0 #mm/min
         
         self.Profil = Profil()
         
@@ -26,10 +31,11 @@ class Biglia():
         self.cycleTime = 0 #current cycle accumulated time
         self.deadCycleTime = 0 #not machining (fast interpolations)
         
-        self.csvData = {} #to return at the end later on
-        self.globalTime = 0.0  #to return for testing purpuses
-    
-    def move_and_get_time(self, X,Z, distance, fast = False) -> float:
+        self.csvData = [] #to return for web interface data display
+        self.globalTime = 0.0 #to return for testing purposes
+        self.globalDist = 0.0 #to return for testing purposes
+        
+    def move_and_get_time(self, X, Y, Z, distance, fast = False) -> float:
         """moves the tool to its new position in a linear trajectory. returns the necessary time"""
         
         #=== distance setter ===
@@ -37,41 +43,43 @@ class Biglia():
         dist = distance
         
         if fast:
-            
             time = dist / self.maxSpeed
+            self.speed = self.maxSpeed
             
         elif not fast:
             
             #=== speed setter ===
-            
-            #determine the speed depending on the machinning factors
+            #determine the speed depending on the machinning factors, (should use method cf line 48)
             if not self.perRevolutionFeed :
-                speed = self.feed
+                self.speed = self.feed
             elif self.isRotationConstant:
-                speed = self.rotation * self.feed
+                self.speed = self.rotation * self.feed
             elif not fast and not self.isRotationConstant:
-                D_moyen = X + self.position[0]
+                D_moyen = X + self.posX
                 rot_moyen = 1000 * self.cuttingSpeed / (pi * D_moyen)
                 if rot_moyen > self.maxRotation : rot_moyen = self.maxRotation
-                speed = rot_moyen * self.feed
-
-            time = dist / speed
+                self.speed = rot_moyen * self.feed
+                
+            time = dist / self.speed
             
-        self.position = (X,Z)
+        self.posX, self.posY, self.posZ = X, Y, Z
+        #increment global variables for thes tests
         self.globalTime += time*60
+        self.globalDist += dist
         return time*60 #return seconds
     
-    def determineDistanceFromCurrentPos(self, X : float = 0, Z : float = 0, kind : str = "linear", *args, **kwargs) -> float:
+    def determineDistanceFromCurrentPos(self, X : float = 0, Y : float = 0, Z : float = 0, kind : str = "linear", **kwargs) -> float:
         """determine distance from the current lathe's position to the new point"""
         if kind == "linear":
-            return sqrt((X-self.position[0])**2 + (Z-self.position[1])**2)
+            return sqrt((X-self.posX)**2 + (Y-self.posY)**2 + (Z-self.posZ)**2)
         
         if kind == "circular":
             I = kwargs["I"]
             J = kwargs["J"]
+            K = kwargs["K"]
             R = kwargs["R"]
             
-            if not I == 0 or not J == 0:
+            if not I == 0 or not K == 0 or not J ==0:
                 if not R == None:
                     #ignonore R by dfault if I or J is set (or both btw)
                     R = None
@@ -79,11 +87,12 @@ class Biglia():
             if not R: #if we are using I and J to calc our distance
                 #then the math begins :
                 #determine u and v vectors (to old and new pos)
-                u = (-I + self.position[0], -J + self.position[1])
-                v = (X - I, Z - J)
+                u = (-I + self.posX, -J + self.posY ,-K + self.posZ)
+                v = (X - I,Y-J ,Z - K)
                 
                 #check if valid (determine R and apply 2R > distance)
-                if 2 * min(magnitude(u), magnitude(v)) < self.determineDistanceFromCurrentPos(X,Z):
+                # print(u,v, magnitude(u), magnitude(v), self.determineDistanceFromCurrentPos(X,Y,Z))
+                if 2 * min(magnitude(u), magnitude(v)) < self.determineDistanceFromCurrentPos(X,Y,Z):
                     raise ValueError("incorrect I and J values in code resulting in an impossible profile, please check yout program or use R")
                 
                 #determine theta, the angle, always between old and new one
@@ -94,21 +103,52 @@ class Biglia():
             elif not R == None:
                 #if we using the radius to code the G2/3 interpolation :
                 #check if valid (determine R and apply 2R > distance)
-                if 2 * R < self.determineDistanceFromCurrentPos(X,Z):
-                    print("WARNING ! R was too small and has been adjusted from %.2f to %.2f" % (R, 0.1 + self.determineDistanceFromCurrentPos(X,Z)/2))
-                    R = 0.1 + self.determineDistanceFromCurrentPos(X,Z)/2
+                if 2 * R < self.determineDistanceFromCurrentPos(X, Y, Z):
+                    
+                    #sometimes R is not valid but interpresters (like biglia's one) still goes on, wo instead of raising error, we adjust and say we did so
+            
+                    print("WARNING ! R was too small and has been adjusted from %.2f to %.2f" % (R, 0.1 + self.determineDistanceFromCurrentPos(X, Y, Z)/2))
+                    R = 0.1 + self.determineDistanceFromCurrentPos(X, Y, Z)/2
                 #determine theta (cf formula on paper)
-                theta = 2 * (asin((self.determineDistanceFromCurrentPos(X,Z)/2)/R))
+                theta = 2 * (asin((self.determineDistanceFromCurrentPos(X, Y, Z)/2)/R))
                 dist = theta * R
                 return(dist)
+            
+    def save_csv_data(self) -> None:
+        """saves csv data and reset time params WITH VALIDATION INCLUDED HERE , also call before ending the main program in order to save last bits of info in self.scvData"""
+        #insert a new entry in the returned csv data and reset the times
+
+        #csvData line format : [Gxx, TXXXX, time it took, line number of the g instruction, (cutting params)]
+
+        # condition to add a new entry :
+        # time  > 0
+        # new G has been encountered OR we are at the end of the file
+
+        #if time is 0 the wrap thins up here
+        if self.cycleTime + self.deadCycleTime == 0 : return None
+
+        #for now, the cutting params returned will be the median cutting speed in mm/min (self.speed calculated in self.move_and_get_time)
+        self.csvData.append([
+            self.currentCycle,
+            self.toolName,
+            round(self.cycleTime + self.deadCycleTime, 2),
+            self.lastGLine, #actual line of the last G to save inside csv data, and not the new one
+            round(self.speed, 1)
+            #add other stuff here in the future
+        ])
+
+        self.cycleTime, self.deadCycleTime = 0, 0
     
     def interpret(self, line):
         """get a line, interprets it and stores toolname, op type and time for csv indentation in its (the lathe) inernal dataset"""
         
-        self.lineNumber +=1
+        self.lineNumber += 1
         
+        #retirer les commentaires de la ligne
         line = re.sub("\(.*?\)","",line)
-        var = getVar(line)
+        line = re.sub(r';.*', '', line)
+        
+        var = getVar(line) #voir s'il y a une variable dans la ligne
         if var:
             self.variables[var[0]] = var[1]
             
@@ -154,7 +194,9 @@ class Biglia():
                 
         #G28 tells to return to reference point
         if "G28" in line :
-            self.position = (0,0)
+            self.posX = 0
+            self.posY = 0
+            self.posZ = 0
             
         #=====================
         # PROFILE DEFINITION
@@ -174,39 +216,48 @@ class Biglia():
             #if we are at the end of profile def, we determine everything
             if not N == 0 and N == self.Profil.end:
                 self.Profil.isDefinitionTakingPlace = False
-                dist = self.Profil.get_mean_Z(self.position[1])
+                dist = self.Profil.get_mean_Z(self.posZ)
                 for i in range(self.Profil.get_number_of_passes()):
                     #======PARAMS GETTER==========
                     X = getParam(line,"X", self.variables)
+                    Y = getParam(line,"Y", self.variables)
                     Z = getParam(line, "Z", self.variables)
                     
                     if X == None : X = self.Profil.points[-1][0]
-                    if Z == None : Z = self.Profil.points[-1][1]
-                    #move and makes the passes
-                    self.cycleTime += self.move_and_get_time(X , Z, dist, fast = False)
+                    if Y == None : Y = self.Profil.points[-1][1]
+                    if Z == None : Z = self.Profil.points[-1][2]
                     #also make fasts passes
-                    self.cycleTime += self.move_and_get_time(X , Z, dist, fast=True)
+                    self.cycleTime += self.move_and_get_time(X , Y, Z, dist, fast=True)
+                    #move and makes the passes
+                    self.cycleTime += self.move_and_get_time(X , Y, Z, dist, fast = False)
                 
                 
                 self.Profil = Profil()
             else:
                 #======PARAMS GETTER==========
                 X = getParam(line, "X", self.variables)
+                Y = getParam(line, "Y", self.variables)
                 Z = getParam(line, "Z", self.variables)
                         
                 if X == None :
                     if len(self.Profil.points) >= 1:
                         X = self.Profil.points[-1][0]
                     else:
-                        X = self.position[0]
+                        X = self.posX
+                
+                if Y == None :
+                    if len(self.Profil.points) >= 1:
+                        Y = self.Profil.points[-1][1]
+                    else:
+                        Y = self.posY
                         
                 if Z == None :
                     if len(self.Profil.points) >= 1:
-                        Z = self.Profil.points[-1][1]
+                        Z = self.Profil.points[-1][2]
                     else:
-                        Z = self.position[1]
+                        Z = self.posZ
                 
-                self.Profil.points.append((X,Z))
+                self.Profil.points.append((X, Y, Z))
             
             return #passer a la ligne suivante sans interpreter le reste
         
@@ -218,9 +269,13 @@ class Biglia():
         try :
             G = getParam(line, "G")
             if "G" in line:
+                #set new cycle type
+                self.save_csv_data()
+                self.lastGLine = self.lineNumber #actual line of the last G to save inside csv data, and not the new one
                 self.currentCycle = "G" + str(int(G))
+                
         except:
-            ... #some times bugged on "GOTO" lines
+            ... #some times bugged on "GOTO" lines, i should fix this dirty code when i have some time lying around...
             
         #and now, we cover all G codes possibilities...
         
@@ -229,42 +284,59 @@ class Biglia():
         #-----------------------------
         
         X = getParam(line, "X", self.variables)
+        Y = getParam(line, "Y", self.variables)
         Z = getParam(line, "Z", self.variables)
         U = getParam(line, "U", self.variables)
+        V = getParam(line, "V", self.variables)
         W = getParam(line, "W", self.variables)
             
         #=====position setter =======
         
-        if X == None: X = self.position[0]
+        if X == None: X = self.posX
         if not U : U = 0
         X += U
         
-        if Z == None: Z = self.position[1]
+        if Y == None : Y = self.posY
+        if not V : V = 0
+        Y += V
+        
+        if Z == None: Z = self.posZ
         if not W : W = 0
         Z += W
             
         #G0 : fast linear interpolation
         if self.currentCycle in ["G00", "G0"]:
-            dist = self.determineDistanceFromCurrentPos(X,Z,"linear")
-            self.deadCycleTime += self.move_and_get_time(X,Z, dist,fast = True) #add the cycle time to the current time cycle
+            dist = self.determineDistanceFromCurrentPos(X, Y, Z, "linear")
+            self.deadCycleTime += self.move_and_get_time(X, Y, Z, dist, fast = True) #add the cycle time to the current time cycle
         #G01 : linear mouvement
         if self.currentCycle in ["G01", "G1"]:
-            dist = self.determineDistanceFromCurrentPos(X,Z,"linear")
-            self.cycleTime += self.move_and_get_time(X,Z, dist,fast = False) #add the cycle time to the current time cycle
+            dist = self.determineDistanceFromCurrentPos(X, Y, Z, "linear")
+            self.cycleTime += self.move_and_get_time(X, Y, Z, dist, fast = False) #add the cycle time to the current time cycle
             
-        #G02 and G03 (time is bascaly the same for either Gs)
+        #G02 and G03 (time is bascaly the same for both Gs)
         if self.currentCycle in ["G02", "G2", "G03", "G3"]:
-            i = getParam(line, "I")
-            j = getParam(line, "J")
-            r = getParam(line, "R")
+            i = getParam(line, "I", self.variables)
+            j = getParam(line, "j", self.variables)
+            k = getParam(line, "K", self.variables)
+            r = getParam(line, "R", self.variables)
             
             if not i : i = 0
             if not j : j = 0
+            if not k : k = 0
             if not r : r = 0
             
-            dist = self.determineDistanceFromCurrentPos(X, Z, "circular", I = i, J = j, R = r)
-            if i or j or r:
-                self.cycleTime += self.move_and_get_time(X,Z, dist, fast = False)
+            if i or j or k or r:
+                dist = self.determineDistanceFromCurrentPos(X, Y, Z, "circular", I = i, J = j, K = k, R = r)
+                self.cycleTime += self.move_and_get_time(X, Y, Z, dist, fast = False)
+                
+        #G4 temporisation support
+        if self.currentCycle in ["G4", "G04"]:
+            #in biglia the temp param is U
+            U = getParam(line,"U")
+            if U :
+                self.cycleTime += U
+                #add to global time for test manually as we are not moving the tool
+                self.globalTime += U
         
         #G71, G72 Stock removal turning/facing => this is an approx given at +-5seconds
         if self.currentCycle in ["G71", "G72"]:
@@ -277,28 +349,33 @@ class Biglia():
             #the peck drilling, we estimate the peck to be negligeable, if they are not, then please review your Gcode because you are not doing it right
             Z = getParam(line, "Z")
             if not Z == None:
-                X = self.position[0]
-                dist = abs(self.position[1]-Z)
-                self.cycleTime += self.move_and_get_time(X,Z, dist, fast = False)
+                X, Y = self.posX, self.posY
+                dist = abs(self.posZ-Z)
+                self.cycleTime += self.move_and_get_time(X, Y, Z, dist, fast = False)
+        
+        if self.currentCycle in ["G76"] :
+            #this is threading cycle
+            #We get P (usually in the firtst line so we set it as an attribute to acces it later) and then Z. Once both are set, we execute the moving
+            P = getParam(line, "P", self.variables, True)
+            Z = getParam(line, "Z", self.variables)
+            if P and len(P) > 3 : self.P = int(P[:2]) #i use len(P) > 3 to eliminate the P i don't want on the second line when using G76
+            if Z:
+                delta_Z = self.posZ - Z
+                for i in range(self.P):
+                    self.move_and_get_time(self.posX, self.posY, self.posZ, delta_Z, fast=False)
+                    self.move_and_get_time(self.posX, self.posY, self.posZ, delta_Z, fast=True)
+                self.P = None
             
         #=====================
         #  TOOL NAME GETTER 
         #=====================
         
         try:
-            T = getParam(line, "T")
+            T = getParam(line, "T", as_string=True)
             if T != None:
                 T = "T" + str(T).replace(".","") #T0101 for exemple
-                #========INSERT CSV DATA LINE==========
-                print(self.cycleTime , line)
-                self.csvData[self.toolName] = str(self.cycleTime + self.deadCycleTime)
                 
                 #====== RESET DATA FOR NEXT TOOL ======
                 self.toolName = T
-                self.cycleTime = 0
-                self.deadCycleTime
         except:
             ... #some times bugged on "GOTO" lines
-            
-        #if this is a new tool, we return the tool times and procced to treat the next
-        #HERE SHOUL ADD A NEW ENTRY TO THE DATA DICT

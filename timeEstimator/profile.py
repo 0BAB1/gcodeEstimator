@@ -14,7 +14,7 @@ class Profil():
         totalX, totalZ = 0 , 0
         for i in range(len(self.points)-1):
             DX = abs(self.points[i+1][0] - self.points[i][0])
-            DZ = abs(self.points[i+1][1] - initialZ)
+            DZ = abs(self.points[i+1][2] - initialZ)
             totalX += abs(DX)
             totalZ += abs(DZ*DX)
             
