@@ -1,9 +1,9 @@
-from .timeEstimator.machines import Biglia
+from .timeEstimator.machines import FanucLathe
 import os
 
 def run(file_path : str) -> (float,list):
     """simulate the given file, returns total time and csv data a table that i can turn into csv later on"""
-    lathe = Biglia()
+    lathe = FanucLathe()
     i = 0
 
     with open(file_path, "r") as file:
