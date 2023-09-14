@@ -212,17 +212,3 @@ def test_get_dist_with_Y_axis():
 
     assert 94.53 < lathe.globalDist < 94.73
 
-# ===========================
-#      OUTPUT TESTS
-# ===========================
-
-
-def test_output_with_one_line():
-    lathe = FanucLathe()
-    file = current_dir + test_dir + "TESTG0.g"
-    with open(file, "r") as file:
-        for line in file:
-            lathe.interpret(line)
-    lathe.save_csv_data()
-
-    assert lathe.csvData == [["G0", "T0101", 2.88, 7, 12500]]

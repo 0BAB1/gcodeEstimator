@@ -1,0 +1,14 @@
+V1.0 :
+    - init
+V1.1 :
+    - Introduced Excel mode for output :
+        - structure of a line in the new output : [Goperation, tool, toolDiameter, Vc, N, f, Vf (speed), distance, time, line number in code]
+        - Vf and time are calculated from other params and formated for escel so time and Vf does NOT apear in clear when not opend in a spreadsheet.
+        - if Vf is set in the code to be in mm/min and not mm/rev, Vc, N, and f will be set to zero in the line as it will NOT change Vf
+        - G00 has Vc, N, Vf set to 0 for the same reason as above
+        - if we use mm/rev mode but rev/min is set to constant, then Vc output will be 0
+        - G71 / G72 : all parameters 0 execpt Vf (needs improvement later)
+        - G74 : all parameters 0 execpt Vf (needs improvement later)
+        - G76 : all parameters 0 execpt Vf (needs improvement later)
+    - Standard output mode :
+        - line number in now at the end of the line

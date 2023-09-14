@@ -4,7 +4,7 @@ o1000 (G76 THREAD CUTTING MULTIPLE PASSES) ;
 (code inspiré de : http://sitemeca.free.fr/index.php?page=prog/programmation&art=1.2.2&exemple=76#codeGT)
 
 T0808(OUTIL A FILETER PAS 1.5)
-G97 M3 S1000
+G97 M3 S1000 (rot cst 1000 1/min)
 G0 X25 Z0
 G76 P050029 Q50 R0.02
 G76 X18.161 Z-20 P919 Q500 F1.5

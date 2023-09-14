@@ -10,7 +10,7 @@ class Profil():
         self.deltaPasses : float # is used to get the number of passes
         
     def get_mean_Z(self, initialZ : float) -> float:
-        """returns the means ponderated Z for a G71 cycle"""
+        """returns the means ponderated Z"""
         totalX, totalZ = 0 , 0
         for i in range(len(self.points)-1):
             DX = abs(self.points[i+1][0] - self.points[i][0])
@@ -22,7 +22,7 @@ class Profil():
         return abs(totalZ/totalX)
                         
     def get_number_of_passes(self) -> int:
-        """divides total height by delata passes, returns the floore number of passes"""
+        """divides total height by delata passes, returns the floore number of passes for G71"""
         #get the total Z thckness
         lowest = 99999999
         highest = -999999
@@ -31,5 +31,3 @@ class Profil():
             if point [0] > highest : highest = point[0]
         
         return floor((highest - lowest)/self.deltaPasses)
-    
-        
