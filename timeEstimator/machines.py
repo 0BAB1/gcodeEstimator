@@ -7,12 +7,11 @@ class FanucLathe():
     """basic interpreter for fanuc biglia lathe gcode"""
     """represents the CNC machine from the BIGLIA brand (CNC fanus Gcode) go inside machine.py to configure the lathe to correspond to your lathe's specifications, i suggest you review this code and copy this class to modify it and suit you type of lathe's configuration"""
     def __init__(self) -> None:
-        self.lineNumber = 0 #the number of the line being interpreted
-        
-        #machinning parameters
+        #position
         self.posX = 0
         self.posY = 0
         self.posZ = 0
+        #cutting params
         self.cuttingSpeed = 0 #m/min
         self.feed = 0 #mm/tour
         self.perRevolutionFeed = True #IS SPEED ? mm/min si false
@@ -20,18 +19,22 @@ class FanucLathe():
         self.rotation = 0 #1/min
         self.maxRotation = 99999999#G92
         self.isRotationConstant = False #are we in G97 mode (True) or in G96 (False => we use Vc cuttingSpeed to calculate N - the rotation - to get time)
+        self.speed = 0 #mm/min #actual speed
+        
+        
+        #current cycle info for data/ouput save
         self.toolName = ""
-        #actual speed
-        self.speed = 0 #mm/min
-        
-        self.Profil = Profil()
-        
-        self.variables = {}
-        
         self.currentCycle = ""
         self.cycleTime = 0 #current cycle accumulated time
         self.deadCycleTime = 0 #not machining (fast interpolations)
+        self.distance = 0
+        self.Profil = Profil()
         
+        #general interpreting infos
+        self.variables = {}
+        
+        # global data (outup and testting vars)
+        self.lineNumber = 0 #the number of the line being interpreted
         self.csvData = [] #to return for web interface data display
         self.globalTime = 0.0 #to return for testing purposes
         self.globalDist = 0.0 #to return for testing purposes
@@ -67,6 +70,7 @@ class FanucLathe():
         #increment global variables for thes tests
         self.globalTime += time*60
         self.globalDist += dist
+        self.distance += distance
         return time*60 #return seconds
     
     def determineDistanceFromCurrentPos(self, X : float = 0, Y : float = 0, Z : float = 0, kind : str = "linear", **kwargs) -> float:
@@ -115,8 +119,8 @@ class FanucLathe():
                 dist = theta * R
                 return(dist)
             
-    def save_csv_data(self) -> None:
-        """saves csv data and reset time params WITH VALIDATION INCLUDED HERE , also call before ending the main program in order to save last bits of info in self.scvData"""
+    def save_csv_data(self, excel_mode = False) -> None:
+        """saves csv data AND RESET current operation params WITH VALIDATION INCLUDED HERE , also call before ending the main program in order to save last bits of info in self.scvData"""
         #insert a new entry in the returned csv data and reset the times
 
         #csvData line format : [Gxx, TXXXX, time it took, line number of the g instruction, (cutting params)]
@@ -127,20 +131,31 @@ class FanucLathe():
 
         #if time is 0 the wrap thins up here
         if self.cycleTime + self.deadCycleTime == 0 : return None
+        
+        if not excel_mode : #classic output
+            #for now, the cutting params returned will be the median cutting speed in mm/min (self.speed calculated in self.move_and_get_time)
+            self.csvData.append([
+                self.currentCycle,
+                self.toolName,
+                round(self.cycleTime + self.deadCycleTime, 2),
+                round(self.speed, 1),
+                self.lastGLine, #actual line of the last G to save inside csv data, and not the new one
+                #add other stuff here in the future
+            ])
+            # output structure : [Goperation, tool, time, speed (Vf), line num]
+            
+        elif excel_mode: #destined to make excel modifications
+            if self.perRevolutionFeed :
+                Vf = self.feed
+            else : #if speed is set set directly in mm/min, set params to 0 (cf changelog v1.1 and readme.md)
+                Vc = 0
+                N = 0
+                f = 0
+                Vf = self.feed
 
-        #for now, the cutting params returned will be the median cutting speed in mm/min (self.speed calculated in self.move_and_get_time)
-        self.csvData.append([
-            self.currentCycle,
-            self.toolName,
-            round(self.cycleTime + self.deadCycleTime, 2),
-            self.lastGLine, #actual line of the last G to save inside csv data, and not the new one
-            round(self.speed, 1)
-            #add other stuff here in the future
-        ])
-
-        self.cycleTime, self.deadCycleTime = 0, 0
+        self.cycleTime, self.deadCycleTime, self.distance = 0, 0, 0 #
     
-    def interpret(self, line):
+    def interpret(self, line, excel_mode = False):
         """get a line, interprets it and stores toolname, op type and time for csv indentation in its (the lathe) inernal dataset"""
         
         self.lineNumber += 1
@@ -271,7 +286,7 @@ class FanucLathe():
             G = getParam(line, "G")
             if "G" in line:
                 #set new cycle type
-                self.save_csv_data()
+                self.save_csv_data(excel_mode=excel_mode)
                 self.lastGLine = self.lineNumber #actual line of the last G to save inside csv data, and not the new one
                 self.currentCycle = "G" + str(int(G))
                 

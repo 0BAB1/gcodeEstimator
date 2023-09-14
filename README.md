@@ -13,7 +13,7 @@ from gcodeEstimator import estimation
 #data output lis :
 data = estimation.run(file_path) #run returns a list
 # list stucture : [ [line1], [line2], [line3], ... ]
-# line structure : lineX = [operation, tool, machinning time, line number in code, feedRate]
+# line structure : lineX = [operation, tool, machinning time,  feedRate, line number in code]
 ```
 
 ## Ouput description
@@ -25,8 +25,8 @@ data = estimation.run(file_path) #run returns a list
 - operation : The operation name as a string (example : G00, G01, G03, ...)
 - tool : the tool currently in use as a string (example : T1000, T5012, ...)
 - machining time : the estimated time the operation will take to execute itself in seconds as a float (example : 5, 10.12, ...)
-- line number in code : The line at which the opération is called in the gcode file in order to find it easily when editing huge files as an integer (exemple : 2, 75, ...)
 - feed rate : the feed rate at which the opération is executed to imediatly spot the sow machining and make optimisations as a float ( example : 40, 200, 89.54, ...)
+- line number in code : The line at which the opération is called in the gcode file in order to find it easily when editing huge files as an integer (exemple : 2, 75, ...)
 
 IMPORTANT NOTE : if the time took is below 0.001 secs, it will not be in the output ! Thus making some G00 disapear.
 
