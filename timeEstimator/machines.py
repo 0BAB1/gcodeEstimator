@@ -38,6 +38,7 @@ class FanucLathe():
         self.csvData = [] #to return for web interface data display
         self.globalTime = 0.0 #to return for testing purposes
         self.globalDist = 0.0 #to return for testing purposes
+        self.line = ""
         
     def move_and_get_time(self, X, Y, Z, distance, fast = False) -> float:
         """moves the tool to its new position in a linear trajectory. returns the necessary time"""
@@ -61,6 +62,7 @@ class FanucLathe():
             elif not fast and not self.isRotationConstant:
                 D_moyen = X + self.posX
                 rot_moyen = 1000 * self.cuttingSpeed / (pi * D_moyen)
+                self.rotation = rot_moyen
                 if rot_moyen > self.maxRotation : rot_moyen = self.maxRotation
                 self.speed = rot_moyen * self.feed
                 
@@ -145,13 +147,54 @@ class FanucLathe():
             # output structure : [Goperation, tool, time, speed (Vf), line num]
             
         elif excel_mode: #destined to make excel modifications
-            if self.perRevolutionFeed :
-                Vf = self.feed
-            else : #if speed is set set directly in mm/min, set params to 0 (cf changelog v1.1 and readme.md)
+            currentLine = len(self.csvData) + 1
+            time = "=(G"+str(currentLine)+"/F"+str(currentLine)+")*60"
+            
+            if self.perRevolutionFeed and not "G71" in self.currentCycle and not "G72" in self.currentCycle and not "G74" in self.currentCycle and not "G76" in self.currentCycle and not "G0" in self.currentCycle and not "G00" in self.currentCycle:
+                if not self.isRotationConstant:
+                    D = int((1000*self.cuttingSpeed)/(pi*self.rotation))
+                    Vc = int(self.cuttingSpeed)
+                    N = "=1000*D" + str(currentLine) + "/(PI()*C"+ str(currentLine)+")"
+                    f = self.feed
+                    Vf = "=E"+ str(currentLine) +"*F"+ str(currentLine)
+                else :
+                    D = 0
+                    Vc = 0
+                    N = self.rotation
+                    f = self.feed
+                    Vf = "=E"+ str(currentLine) +"*F"+ str(currentLine)
+                    
+            elif self.currentCycle in ["G71", "G72", "G74", "G76"]:
+                #needs imrovement later (make profile methods to get those differents params)
+                D = 0
                 Vc = 0
                 N = 0
                 f = 0
-                Vf = self.feed
+                Vf = int(self.speed)
+                self.distance = 0
+                time = round(self.cycleTime + self.deadCycleTime,2)
+            else : #if speed is set set directly in mm/min, set params to 0 (cf changelog v1.1 and readme.md) or if g71/72/74/76
+                D = 0
+                Vc = 0
+                N = 0
+                f = 0
+                Vf = int(self.feed)
+                if self.currentCycle in ["G00", "G0"] : Vf = self.maxSpeed
+            
+            #write down in csvData :
+            self.csvData.append([
+                self.currentCycle,
+                self.toolName,
+                D,
+                Vc,
+                N,
+                f,
+                Vf,
+                round(self.distance,2),
+                time,
+                self.lastGLine, #actual line of the last G to save inside csv data, and not the new one
+                #add other stuff here in the future
+            ])
 
         self.cycleTime, self.deadCycleTime, self.distance = 0, 0, 0 #
     
@@ -159,6 +202,7 @@ class FanucLathe():
         """get a line, interprets it and stores toolname, op type and time for csv indentation in its (the lathe) inernal dataset"""
         
         self.lineNumber += 1
+        self.line = line
         
         #retirer les commentaires de la ligne
         line = re.sub("\(.*?\)","",line)
@@ -167,6 +211,20 @@ class FanucLathe():
         var = getVar(line) #voir s'il y a une variable dans la ligne
         if var:
             self.variables[var[0]] = var[1]
+        
+        #=====================
+        #  G CYCLE GETTER
+        #=====================
+         
+        try :
+            G = getParam(line, "G")
+            if "G" in line:
+                #set new cycle type
+                self.save_csv_data(excel_mode=excel_mode)
+                self.lastGLine = self.lineNumber #actual line of the last G to save inside csv data, and not the new one
+                self.currentCycle = "G" + str(int(G))
+        except:
+            ... #some times bugged on "GOTO" lines, i should fix this dirty code when i have some time lying around...
             
         #=====================
         #  FEED SPEED GETTER
@@ -176,7 +234,7 @@ class FanucLathe():
         
         if not F == None:
             self.feed = F
-        
+            
         #-----------------------------
         #Cutting speeds G getters
         #-----------------------------
@@ -228,7 +286,6 @@ class FanucLathe():
                 N = int(0)
             else :
                 N = int(N)
-            
             #if we are at the end of profile def, we determine everything
             if not N == 0 and N == self.Profil.end:
                 self.Profil.isDefinitionTakingPlace = False
@@ -246,7 +303,9 @@ class FanucLathe():
                     self.cycleTime += self.move_and_get_time(X , Y, Z, dist, fast=True)
                     #move and makes the passes
                     self.cycleTime += self.move_and_get_time(X , Y, Z, dist, fast = False)
-                
+                    #SAVE PROCESS FOR G71
+                    self.currentCycle = "G71"
+                self.save_csv_data(excel_mode=excel_mode)
                 
                 self.Profil = Profil()
             else:
@@ -281,17 +340,7 @@ class FanucLathe():
         # G CODES INTERPRETER
         #=====================
         
-        #we get the current cycle so we can spread it across lines
-        try :
-            G = getParam(line, "G")
-            if "G" in line:
-                #set new cycle type
-                self.save_csv_data(excel_mode=excel_mode)
-                self.lastGLine = self.lineNumber #actual line of the last G to save inside csv data, and not the new one
-                self.currentCycle = "G" + str(int(G))
-                
-        except:
-            ... #some times bugged on "GOTO" lines, i should fix this dirty code when i have some time lying around...
+       
             
         #and now, we cover all G codes possibilities...
         
@@ -324,6 +373,7 @@ class FanucLathe():
         if self.currentCycle in ["G00", "G0"]:
             dist = self.determineDistanceFromCurrentPos(X, Y, Z, "linear")
             self.deadCycleTime += self.move_and_get_time(X, Y, Z, dist, fast = True) #add the cycle time to the current time cycle
+        
         #G01 : linear mouvement
         if self.currentCycle in ["G01", "G1"]:
             dist = self.determineDistanceFromCurrentPos(X, Y, Z, "linear")
@@ -378,8 +428,9 @@ class FanucLathe():
             if Z:
                 delta_Z = self.posZ - Z
                 for i in range(self.P):
-                    self.move_and_get_time(self.posX, self.posY, self.posZ, delta_Z, fast=False)
-                    self.move_and_get_time(self.posX, self.posY, self.posZ, delta_Z, fast=True)
+                    self.cycleTime += self.move_and_get_time(self.posX, self.posY, self.posZ, delta_Z, fast=True)
+                    self.cycleTime += self.move_and_get_time(self.posX, self.posY, self.posZ, delta_Z, fast=False)
+                self.save_csv_data(excel_mode=excel_mode)
                 self.P = None
             
         #=====================

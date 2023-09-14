@@ -28,6 +28,6 @@ class Profil():
         highest = -999999
         for point in self.points :
             if point[0] < lowest : lowest = point[0]
-            if point [0] > highest : highest = point[0]
+            if point[0] > highest : highest = point[0]
         
         return floor((highest - lowest)/self.deltaPasses)

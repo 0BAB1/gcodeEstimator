@@ -16,6 +16,8 @@ data = estimation.run(file_path) #run returns a list
 # line structure : lineX = [operation, tool, machinning time,  feedRate, line number in code]
 ```
 
+!!! Adding excel mode for data output => still very buggy
+
 ## Ouput description
 
 ```python
