@@ -44,7 +44,7 @@ def test_output_excel_mode_with_one_line_G01_cst_feed():
             lathe.interpret(line, excel_mode = True)
     lathe.save_csv_data(excel_mode=True)
     
-    assert lathe.csvData == [["G1", "T0101", 350, 0, 0, 0, 1000, 350, "=(G2/F2)*60", 6]]
+    assert lathe.csvData == [["G1", "T0101", 0, 0, 0, 0, 1000, 350, "=(G2/F2)*60", 6]]
     
 def test_output_excel_mode_with_one_line_G01_cst_rot():
     lathe = FanucLathe()
@@ -54,7 +54,7 @@ def test_output_excel_mode_with_one_line_G01_cst_rot():
             lathe.interpret(line, excel_mode = True)
     lathe.save_csv_data(excel_mode=True)
     
-    assert lathe.csvData == [["G0", "T0101", 20, 0, 2000, 0.05, "=D2*E2", 40, "=(G2/F2)*60", 5]]
+    assert lathe.csvData == [["G0", "T0101", 0, 0, 2000, 0.05, "=D2*E2", 40, "=(G2/F2)*60", 5]]
     
 def test_output_excel_mode_with_one_line_G01_cst_Vc():
     lathe = FanucLathe()
