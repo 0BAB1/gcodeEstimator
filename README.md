@@ -54,6 +54,7 @@ and for Excel mode :
 - the particularity is that some fields are "calculed" using spreadsheet syntax (like "=B1*C1"). You also have more details. This is nice to make changes directly in the spreadsheet and see the results on the time imediatly.
 - Vf, rev/min and time are calculated except if cannot (example : constant rotation is used) Cf changlog V1.1 for more details
 - G71,72,74,76,etc.. (special cycles) only diplay time and time is not calculated, Cf changlog V1.1 for more details
+- Please note that parameters that doeas NOT HAVE AN EFFECT in the gcode programmation are set to 0 ! (example : if rev/min is constant, Vc is set to 0) Cf changlog V1.1 for more details
 
 ## Supported languages and Opérations
 
