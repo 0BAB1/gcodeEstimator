@@ -63,7 +63,7 @@ I made this for the needs of my compagny, meaning it might not fit yours. Design
 
 Feel free to read the code, understand the architecture and add you own interpreter in machines.py for your own needs and push it to this repo :)
 
-### Supported operations : 
+## Supported operations : 
 
 FANUC for Lathes (Biglia constructor):
 
@@ -77,7 +77,7 @@ FANUC for Lathes (Biglia constructor):
 - G28 (reset tool position to 0,0,0)
 - cutting parameters => G94, G94, G99, G98 (per revolution or per minute feed) G97, G96 (constant rotation or not) G92 (max spindle speed)
 
-### Non supported and might be added :
+## Non supported and might be added :
 
 - G33 (thead cutting)
 - G53, G54, .. (set origin) (not sure to add this one)
