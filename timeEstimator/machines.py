@@ -45,7 +45,7 @@ class FanucLathe():
         
         #=== distance setter ===
         
-        dist = distance
+        dist = abs(distance)
         
         if fast:
             time = dist / self.maxSpeed
@@ -148,7 +148,7 @@ class FanucLathe():
             
         elif excel_mode: #destined to make excel modifications
             currentLine = len(self.csvData) + 1
-            time = "=(G"+str(currentLine)+"/F"+str(currentLine)+")*60"
+            time = "=(H"+str(currentLine)+"/G"+str(currentLine)+")*60"
             
             if self.perRevolutionFeed and not "G71" in self.currentCycle and not "G72" in self.currentCycle and not "G74" in self.currentCycle and not "G76" in self.currentCycle and not "G0" in self.currentCycle and not "G00" in self.currentCycle:
                 if not self.isRotationConstant:
@@ -164,7 +164,7 @@ class FanucLathe():
                     f = self.feed
                     Vf = "=E"+ str(currentLine) +"*F"+ str(currentLine)
                     
-            elif self.currentCycle in ["G71", "G72", "G74", "G76"]:
+            elif self.currentCycle in ["G71", "G72", "G74", "G76", "G4", "G04"]:
                 #needs imrovement later (make profile methods to get those differents params)
                 D = 0
                 Vc = 0
