@@ -1,8 +1,46 @@
 # Gcode Time estimator V1.0 by Hugo.B
 
-This python script takes a gcode file as an input and resturn a list containing the time data and relevant infos.
+This python script takes a gcode file as an input and resturn a list containing the time data and relevant infos by interpreting the G Code.
 
-This output has been design to be converted as a CSV file. meaning each list element is a line, containing column elements.
+This output has been designed to be converted as a CSV file. meaning each list element is a line, containing column elements.
+
+## Usage
+
+first, import the estimation package :
+
+```import estimation```
+
+or if you downloaded gcodeEstimator as a package :
+
+```from gcodeEstimator import estimation```
+
+then use the run method to interpret you gcode :
+
+```python
+timeEstimation = estimation.run("<path to your gcode>") # returns tuple : (total_time, detailled_operations_list)
+print(timeEstimation[0]) #display total time estimated
+print(timeEstimation[1]) #display each operation time
+```
+
+This (the run method) returns a tuple : (totalTime, detailledTimeData). DetailedTimeData is a list giving details on every single operation so your can identify time consuming operations or see if the cutting speeds are to your liking.
+
+To have more details on the cutting speeds you can use the "excel mode" when using the run method :
+
+```python
+timeEstimation = estimation.run("<path to your gcode>", excel_mode = True) # returns tuple : (total_time, detailled_operations_+cuttingSpeeds_list)
+print(timeEstimation[0]) #display total time estimated
+print(timeEstimation[1]) #display each detailled operation time
+```
+
+More details on the data structure in the sections below.
+
+gcodeEstimator has been design with spread sheet data visualisation in mind. You can convert the output data list in csv using the makeCsv method :
+
+```python
+timeEstimation = estimation.run("<path to your gcode>", excel_mode = True)
+timeEstimation = timeEstimation[1] # keep only the list of the opration details
+estimation.makeCsv("<CSV destination file>", timeEstimation)
+```
 
 ## Output structure 
 
