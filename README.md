@@ -1,5 +1,8 @@
 # Gcode Time estimator V1.0 by Hugo.B
 
+![image](https://github.com/0BAB1/gcodeEstimator/assets/62248962/c089e62d-b073-45a9-a495-fc66f3cf5ddd)
+
+
 This python script takes a gcode file as an input and resturn a list containing the time data and relevant infos by interpreting the G Code.
 
 This output has been designed to be converted as a CSV file. meaning each list element is a line, containing column elements.
