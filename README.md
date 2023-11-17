@@ -4,7 +4,7 @@
 
 ## Estimate your machinning time... Instantly
 
-### And use the CSV module to make changes directly into excel and estmate the costs !
+### And use the dynamic CSV module to make changes directly into excel and estmate the costs !
 
 This python script interprets a gcode file and resturns a list containing the time data and relevant infos by interpreting the G Code.
 
