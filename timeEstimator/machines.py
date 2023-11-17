@@ -93,7 +93,7 @@ class FanucLathe():
                     
             if not R: #if we are using I and J to calc our distance
                 #then the math begins :
-                #determine u and v vectors (to old and new pos)
+                #determine u and v vectors (to old and new pos FROM the radius center)
                 u = (-I + self.posX, -J + self.posY ,-K + self.posZ)
                 v = (X - I,Y-J ,Z - K)
                 
