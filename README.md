@@ -1,4 +1,4 @@
-# Gcode Time estimator V1.0 by Hugo.B
+# Gcode Time estimator V1.1.2 by Hugo.B
 
 ![image](https://github.com/0BAB1/gcodeEstimator/assets/62248962/c089e62d-b073-45a9-a495-fc66f3cf5ddd)
 
